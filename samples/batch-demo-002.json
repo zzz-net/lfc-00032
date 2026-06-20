@@ -1,0 +1,37 @@
+[
+  {
+    "sampleNo": "SMP-20250621-101",
+    "type": "血液样本",
+    "collectedAt": "2025-06-21T08:00:00Z",
+    "collectedBy": "张采集",
+    "description": "急诊加急检测1号"
+  },
+  {
+    "sampleNo": "SMP-20250621-102",
+    "type": "血液样本",
+    "collectedAt": "2025-06-21T08:15:00Z",
+    "collectedBy": "张采集",
+    "description": "急诊加急检测2号"
+  },
+  {
+    "sampleNo": "SMP-20250621-103",
+    "type": "尿液样本",
+    "collectedAt": "2025-06-21T08:30:00Z",
+    "collectedBy": "李采集",
+    "description": "常规检测"
+  },
+  {
+    "sampleNo": "SMP-20250621-104",
+    "type": "痰液样本",
+    "collectedAt": "2025-06-21T08:45:00Z",
+    "collectedBy": "李采集",
+    "description": "细菌培养检测"
+  },
+  {
+    "sampleNo": "SMP-20250621-105",
+    "type": "组织样本",
+    "collectedAt": "2025-06-21T09:00:00Z",
+    "collectedBy": "张采集",
+    "description": "病理切片检测"
+  }
+]
