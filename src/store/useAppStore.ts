@@ -354,114 +354,138 @@ export const useAppStore = create<AppState>((set, get) => ({
     const failedRows: ImportResult['failedRows'] = [];
     let importedCount = 0;
 
-    const existingSampleNos = new Set((await db.getAllKeysFromIndex(STORES.samples, 'by-sampleNo')));
-
-    const tx = db.transaction(
-      [STORES.batches, STORES.samples, STORES.transferRecords, STORES.auditLogs],
-      'readwrite'
-    );
+    const existingSamples = await db.getAllFromIndex(STORES.samples, 'by-sampleNo');
+    const existingSampleNos = new Set(existingSamples.map((s) => s.sampleNo));
+    const batchSeenNos = new Set<string>();
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      try {
-        if (!row.sampleNo || !row.type || !row.collectedAt || !row.collectedBy) {
-          failedRows.push({
-            rowIndex: i,
-            data: row,
-            errorCode: ERROR_CODES.MISSING_REQUIRED_FIELD,
-            errorMessage: '缺少必填字段',
-          });
-          continue;
-        }
 
-        if (existingSampleNos.has(row.sampleNo)) {
-          failedRows.push({
-            rowIndex: i,
-            data: row,
-            errorCode: ERROR_CODES.DUPLICATE_SAMPLE_NO,
-            errorMessage: `样本号 ${row.sampleNo} 已存在`,
-          });
-          continue;
-        }
-
-        const collectedDate = new Date(row.collectedAt);
-        if (isNaN(collectedDate.getTime())) {
-          failedRows.push({
-            rowIndex: i,
-            data: row,
-            errorCode: ERROR_CODES.INVALID_DATE_FORMAT,
-            errorMessage: '采集日期格式无效',
-          });
-          continue;
-        }
-
-        const sampleId = generateId();
-        const sample: Sample = {
-          id: sampleId,
-          sampleNo: row.sampleNo,
-          batchId,
-          type: row.type,
-          collectedAt: row.collectedAt,
-          collectedBy: row.collectedBy,
-          description: row.description,
-          currentStatus: 'imported',
-          isArchived: false,
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        await tx.objectStore(STORES.samples).add(sample);
-        existingSampleNos.add(row.sampleNo);
-
-        const transfer: TransferRecord = {
-          id: generateId(),
-          sampleId,
-          type: 'import',
-          toStatus: 'imported',
-          operatorId: currentUser.id,
-          operatedAt: now,
-          remark: `批次导入: ${batchNo}`,
-          isRolledBack: false,
-        };
-        await tx.objectStore(STORES.transferRecords).add(transfer);
-
-        importedCount++;
-      } catch (err) {
+      if (!row.sampleNo || !row.type || !row.collectedAt || !row.collectedBy) {
         failedRows.push({
           rowIndex: i,
           data: row,
-          errorCode: 'UNKNOWN_ERROR',
-          errorMessage: err instanceof Error ? err.message : '未知错误',
+          errorCode: ERROR_CODES.MISSING_REQUIRED_FIELD,
+          errorMessage: '缺少必填字段',
         });
+        continue;
+      }
+
+      if (existingSampleNos.has(row.sampleNo) || batchSeenNos.has(row.sampleNo)) {
+        failedRows.push({
+          rowIndex: i,
+          data: row,
+          errorCode: ERROR_CODES.DUPLICATE_SAMPLE_NO,
+          errorMessage: `样本号 ${row.sampleNo} 已存在`,
+        });
+        continue;
+      }
+
+      const collectedDate = new Date(row.collectedAt);
+      if (isNaN(collectedDate.getTime())) {
+        failedRows.push({
+          rowIndex: i,
+          data: row,
+          errorCode: ERROR_CODES.INVALID_DATE_FORMAT,
+          errorMessage: '采集日期格式无效',
+        });
+        continue;
+      }
+
+      batchSeenNos.add(row.sampleNo);
+      existingSampleNos.add(row.sampleNo);
+      importedCount++;
+    }
+
+    const validRows = rows.filter(
+      (_, i) => !failedRows.some((f) => f.rowIndex === i)
+    );
+
+    if (importedCount > 0) {
+      const sampleIds: string[] = [];
+      const tx = db.transaction(
+        [STORES.batches, STORES.samples, STORES.transferRecords, STORES.auditLogs, STORES.failedTransfers],
+        'readwrite'
+      );
+
+      try {
+        for (const row of validRows) {
+          const sampleId = generateId();
+          sampleIds.push(sampleId);
+          const sample: Sample = {
+            id: sampleId,
+            sampleNo: row.sampleNo,
+            batchId,
+            type: row.type,
+            collectedAt: row.collectedAt,
+            collectedBy: row.collectedBy,
+            description: row.description,
+            currentStatus: 'imported',
+            isArchived: false,
+            createdAt: now,
+            updatedAt: now,
+          };
+          tx.objectStore(STORES.samples).put(sample);
+
+          const transfer: TransferRecord = {
+            id: generateId(),
+            sampleId,
+            type: 'import',
+            toStatus: 'imported',
+            operatorId: currentUser.id,
+            operatedAt: now,
+            remark: `批次导入: ${batchNo}`,
+            isRolledBack: false,
+          };
+          tx.objectStore(STORES.transferRecords).put(transfer);
+        }
+
+        const batch: Batch = {
+          id: batchId,
+          batchNo,
+          importedAt: now,
+          importedBy: currentUser.id,
+          sampleCount: importedCount,
+          remark,
+        };
+        tx.objectStore(STORES.batches).put(batch);
+
+        const auditLog: AuditLog = {
+          id: generateId(),
+          timestamp: now,
+          userId: currentUser.id,
+          action: 'batch:import',
+          targetType: 'batch',
+          targetId: batchId,
+          details: { batchNo, importedCount, failedCount: failedRows.length, remark },
+        };
+        tx.objectStore(STORES.auditLogs).put(auditLog);
+
+        for (const f of failedRows) {
+          const failed: FailedTransfer = {
+            id: generateId(),
+            sampleId: '',
+            attemptedType: 'import',
+            attemptedAt: now,
+            attemptedBy: currentUser.id,
+            errorCode: f.errorCode,
+            errorMessage: f.errorMessage,
+            payload: { rowIndex: f.rowIndex, sampleNo: f.data.sampleNo, batchNo },
+            resolved: false,
+          };
+          tx.objectStore(STORES.failedTransfers).put(failed);
+        }
+
+        await tx.done;
+      } catch (err) {
+        console.warn('Batch import partial error:', err);
+        try { await tx.done; } catch { /* tx may already be aborted */ }
       }
     }
 
-    if (importedCount > 0) {
-      const batch: Batch = {
-        id: batchId,
-        batchNo,
-        importedAt: now,
-        importedBy: currentUser.id,
-        sampleCount: importedCount,
-        remark,
-      };
-      await tx.objectStore(STORES.batches).add(batch);
-
-      const auditLog: AuditLog = {
-        id: generateId(),
-        timestamp: now,
-        userId: currentUser.id,
-        action: 'batch:import',
-        targetType: 'batch',
-        targetId: batchId,
-        details: { batchNo, importedCount, failedCount: failedRows.length, remark },
-      };
-      await tx.objectStore(STORES.auditLogs).add(auditLog);
-    }
-
-    await tx.done;
     await get().getAllSamples();
     await get().getAllBatches();
+    await get().getFailedTransfers();
 
     return {
       success: importedCount > 0,
@@ -1027,6 +1051,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const allSamples = await db.getAll(STORES.samples);
     const allUsers = await db.getAll(STORES.users);
     const allLocations = await db.getAll(STORES.locations);
+    const allFailedTransfers = await db.getAll(STORES.failedTransfers);
     const allAuditLogs = await get().getAuditLogs(filter);
 
     const sampleMap = new Map(allSamples.map((s) => [s.id, s]));
@@ -1037,6 +1062,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       .map((t) => ({
         id: t.id,
         sampleNo: sampleMap.get(t.sampleId)?.sampleNo ?? t.sampleId,
+        sampleId: t.sampleId,
         transferType: t.type,
         fromStatus: t.fromStatus,
         toStatus: t.toStatus,
@@ -1052,8 +1078,22 @@ export const useAppStore = create<AppState>((set, get) => ({
         rolledBackBy: t.rolledBackBy ? userMap.get(t.rolledBackBy)?.displayName : '',
         rolledBackAt: t.rolledBackAt ?? '',
         rollbackReason: t.rollbackReason ?? '',
+        rollbackToRecordId: t.rollbackToRecordId ?? '',
       }))
       .sort((a, b) => a.operatedAt.localeCompare(b.operatedAt));
+
+    const failedTimeline = allFailedTransfers.map((f) => ({
+      id: f.id,
+      sampleNo: sampleMap.get(f.sampleId)?.sampleNo ?? (f.payload.sampleNo as string) ?? f.sampleId,
+      attemptedType: f.attemptedType,
+      attemptedAt: f.attemptedAt,
+      attemptedBy: userMap.get(f.attemptedBy)?.displayName ?? f.attemptedBy,
+      errorCode: f.errorCode,
+      errorMessage: f.errorMessage,
+      resolved: f.resolved,
+      resolvedBy: f.resolvedBy ? userMap.get(f.resolvedBy)?.displayName : '',
+      resolvedAt: f.resolvedAt ?? '',
+    }));
 
     if (format === 'json') {
       return JSON.stringify(
@@ -1061,6 +1101,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           exportedAt: nowISO(),
           filter: filter ?? {},
           transfers: timeline,
+          failedTransfers: failedTimeline,
           auditLogs: allAuditLogs,
         },
         null,
@@ -1085,6 +1126,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       '回退人',
       '回退时间',
       '回退原因',
+      '回退至记录ID',
     ];
     const csvRows = [headers];
     for (const t of timeline) {
@@ -1105,8 +1147,38 @@ export const useAppStore = create<AppState>((set, get) => ({
         t.rolledBackBy,
         t.rolledBackAt,
         t.rollbackReason,
+        t.rollbackToRecordId,
       ]);
     }
+
+    csvRows.push([]);
+    csvRows.push(['=== 失败记录 ===']);
+    const failedHeaders = [
+      '尝试时间',
+      '样本编号',
+      '尝试操作',
+      '尝试人',
+      '错误码',
+      '错误信息',
+      '是否已解决',
+      '解决人',
+      '解决时间',
+    ];
+    csvRows.push(failedHeaders);
+    for (const f of failedTimeline) {
+      csvRows.push([
+        f.attemptedAt,
+        f.sampleNo,
+        f.attemptedType,
+        f.attemptedBy,
+        f.errorCode,
+        f.errorMessage,
+        f.resolved ? '是' : '否',
+        f.resolvedBy,
+        f.resolvedAt,
+      ]);
+    }
+
     return Papa.unparse(csvRows);
   },
 

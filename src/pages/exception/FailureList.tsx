@@ -46,13 +46,14 @@ export const FailureList = () => {
                 {failedTransfers.map((f) => {
                   const sample = getSampleById(f.sampleId);
                   const user = getUserById(f.attemptedBy);
+                  const displaySampleNo = sample?.sampleNo || (f.payload?.sampleNo as string) || f.sampleId || '-';
                   return (
                     <tr key={f.id} className="table-row bg-rose-50/30">
                       <td className="table-cell text-slate-500 text-xs whitespace-nowrap">
                         {formatDate(f.attemptedAt)}
                       </td>
                       <td className="table-cell font-medium">
-                        {sample?.sampleNo || f.sampleId}
+                        {displaySampleNo}
                       </td>
                       <td className="table-cell">
                         <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">

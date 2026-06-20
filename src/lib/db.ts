@@ -60,6 +60,13 @@ export interface SampleTrackingDBSchema {
 
 let dbInstance: IDBPDatabase<SampleTrackingDBSchema> | null = null;
 
+export const resetDBInstance = () => {
+  if (dbInstance) {
+    dbInstance.close();
+    dbInstance = null;
+  }
+};
+
 export const getDB = async (): Promise<IDBPDatabase<SampleTrackingDBSchema>> => {
   if (dbInstance) return dbInstance;
 
