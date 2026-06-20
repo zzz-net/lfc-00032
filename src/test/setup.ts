@@ -2,14 +2,20 @@ import 'fake-indexeddb/auto';
 
 if (typeof globalThis.localStorage === 'undefined') {
   const store: Record<string, string> = {};
-  globalThis.localStorage = {
-    getItem: (key: string) => store[key] ?? null,
-    setItem: (key: string, value: string) => { store[key] = value; },
-    removeItem: (key: string) => { delete store[key]; },
-    clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
-    get length() { return Object.keys(store).length; },
-    key: (index: number) => Object.keys(store)[index] ?? null,
+  const mockStorage: Storage = {
+    getItem: (key: string): string | null => Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null,
+    setItem: (key: string, value: string): void => { store[key] = String(value); },
+    removeItem: (key: string): void => { delete store[key]; },
+    clear: (): void => { Object.keys(store).forEach((k) => delete store[k]); },
+    get length(): number { return Object.keys(store).length; },
+    key: (index: number): string | null => Object.keys(store)[index] ?? null,
   };
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: mockStorage,
+    writable: true,
+    configurable: true,
+    enumerable: true,
+  });
 }
 
 import { useAppStore } from '../store/useAppStore';

@@ -33,7 +33,8 @@
     },
     "types": [
       "node",
-      "express"
+      "express",
+      "vitest/globals"
     ]
   },
   "include": [
