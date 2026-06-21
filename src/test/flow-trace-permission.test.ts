@@ -190,7 +190,7 @@ describe('Flow Trace Permission Module - Core Permission Check', () => {
     const check1 = checkFlowTracePermission(user, 'viewList');
     expect(check1.decision).toBe('allow');
 
-    revokePermission(user!.id, '安全原因，临时撤销权限');
+    await revokePermission(user!.id, '安全原因，临时撤销权限');
 
     const check2 = checkFlowTracePermission(user, 'viewList');
     expect(check2.decision).toBe('deny');
@@ -201,11 +201,11 @@ describe('Flow Trace Permission Module - Core Permission Check', () => {
     const user = await initAndLogin(AUDITOR_USER.username, AUDITOR_USER.password);
     expect(user).not.toBeNull();
 
-    revokePermission(user!.id, '临时撤销');
+    await revokePermission(user!.id, '临时撤销');
     const check1 = checkFlowTracePermission(user, 'viewList');
     expect(check1.decision).toBe('deny');
 
-    restorePermission(user!.id);
+    await restorePermission(user!.id);
     const check2 = checkFlowTracePermission(user, 'viewList');
     expect(check2.decision).toBe('allow');
   });
@@ -376,7 +376,7 @@ describe('Flow Trace Permission Module - Service Layer Integration', () => {
     const user = await initAndLogin(AUDITOR_USER.username, AUDITOR_USER.password);
     expect(user).not.toBeNull();
 
-    revokePermission(user!.id, '权限已被撤销');
+    await revokePermission(user!.id, '权限已被撤销');
 
     const listEnvelope = await s().getFlowTraceListSecure();
     expect(listEnvelope.permission.decision).toBe('deny');
@@ -445,7 +445,7 @@ describe('Flow Trace Permission Module - Complex Scenarios', () => {
     expect(midCheck1).toBeNull();
 
     await new Promise(resolve => setTimeout(resolve, 10));
-    revokePermission(user!.id, '操作期间撤销权限');
+    await revokePermission(user!.id, '操作期间撤销权限');
 
     const midCheck2 = checkPermissionMidOperation(user, 'export', operationStart);
     expect(midCheck2).not.toBeNull();
@@ -530,7 +530,7 @@ describe('Flow Trace Permission Module - Complex Scenarios', () => {
     const user = await initAndLogin(AUDITOR_USER.username, AUDITOR_USER.password);
     expect(user).not.toBeNull();
 
-    revokePermission(user!.id, '测试拒绝日志');
+    await revokePermission(user!.id, '测试拒绝日志');
 
     const beforeLogs = getOperationLogs().length;
     await s().getFlowTraceListSecure();

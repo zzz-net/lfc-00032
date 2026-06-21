@@ -1,7 +1,7 @@
 import type { UserRole, SampleStatus, TransferType } from './types';
 
 export const DB_NAME = 'SampleTrackingDB';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 export const STORES = {
   users: 'users',
@@ -11,6 +11,8 @@ export const STORES = {
   transferRecords: 'transferRecords',
   failedTransfers: 'failedTransfers',
   auditLogs: 'auditLogs',
+  flowTraceAuditRecords: 'flowTraceAuditRecords',
+  flowTracePermissionState: 'flowTracePermissionState',
 } as const;
 
 export const SESSION_KEY = 'sample_tracking_session';
@@ -85,6 +87,9 @@ export const ERROR_CODES = {
   INVALID_DATE_FORMAT: 'INVALID_DATE_FORMAT',
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   AUTH_REQUIRED: 'AUTH_REQUIRED',
+  PERMISSION_STATE_CORRUPTED: 'PERMISSION_STATE_CORRUPTED',
+  AUDIT_RECORD_PERSIST_FAILED: 'AUDIT_RECORD_PERSIST_FAILED',
+  SAMPLE_REIMPORTED: 'SAMPLE_REIMPORTED',
 } as const;
 
 export const ERROR_CATEGORIES: Record<string, 'permission' | 'status' | 'location' | 'duplicate' | 'other'> = {
@@ -181,3 +186,44 @@ export const FLOW_TRACE_REDACTION_LEVELS = {
     message: '敏感字段已脱敏，如需完整信息请联系审核员',
   },
 };
+
+export const DEFAULT_FLOW_TRACE_AUDIT_CONFIG: import('./types').FlowTraceAuditConfig = {
+  enabled: true,
+  logSuccess: true,
+  logDenied: true,
+  logRedacted: true,
+  retentionDays: 90,
+  includeMetadata: true,
+  flushIntervalMs: 5000,
+  maxBufferSize: 20,
+};
+
+export const FLOW_TRACE_AUDITOR_VISIBLE_FIELDS = [
+  'sample.id', 'sample.sampleNo', 'sample.type', 'sample.batchId', 'sample.batchNo',
+  'sample.currentStatus', 'sample.currentLocation', 'sample.currentHolder',
+  'sample.isArchived', 'sample.archivedAt', 'sample.archivedBy',
+  'sample.reviewedBy', 'sample.reviewedAt', 'sample.isLocked', 'sample.lockReason',
+  'sample.collectedAt', 'sample.collectedBy', 'sample.description',
+  'businessChain', 'latestValidTransfer', 'blockedOperations',
+  'rollbackHistory', 'fullTimeline', 'summary',
+];
+
+export const FLOW_TRACE_NON_AUDITOR_VISIBLE_FIELDS = [
+  'sample.id', 'sample.sampleNo', 'sample.type', 'sample.batchNo',
+  'sample.currentStatus', 'sample.currentLocation', 'sample.currentHolder',
+  'sample.isArchived', 'sample.isLocked',
+  'sample.collectedAt', 'sample.collectedBy',
+  'businessChain.key', 'businessChain.label', 'businessChain.status',
+  'businessChain.timestamp', 'businessChain.location',
+  'summary.totalTransfers', 'summary.validTransfers',
+  'summary.currentStageLabel', 'summary.daysInCurrentStage',
+];
+
+export const FLOW_TRACE_NON_AUDITOR_REDACTED_FIELDS = [
+  'sample.lockReason', 'sample.archivedBy', 'sample.archivedAt',
+  'sample.reviewedBy', 'sample.reviewedAt',
+  'businessChain.operatorName', 'businessChain.operatorRole', 'businessChain.remark',
+  'businessChain.rollbackReason', 'businessChain.errorCode', 'businessChain.errorMessage',
+  'latestValidTransfer', 'blockedOperations', 'rollbackHistory', 'fullTimeline',
+  'summary.failedAttempts', 'summary.rollbackCount', 'summary.archiveAttempts',
+];

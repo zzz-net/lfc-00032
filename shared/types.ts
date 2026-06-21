@@ -422,6 +422,7 @@ export interface FlowTracePermissionState {
   grantedActions: FlowTracePermissionAction[];
   revokedAt?: string;
   revokeReason?: string;
+  restoredAt?: string;
 }
 
 export interface FlowTraceRedactedData {
@@ -437,4 +438,62 @@ export interface FlowTracePermissionEnvelope<T> {
   redaction?: FlowTraceRedactedData;
   operationId: string;
   timestamp: string;
+}
+
+export interface FlowTraceAuditRecord {
+  id: string;
+  operationId: string;
+  userId: string;
+  username: string;
+  userRole: UserRole;
+  action: FlowTracePermissionAction;
+  sampleId?: string;
+  sampleNo?: string;
+  timestamp: string;
+  status: FlowTraceOperationStatus;
+  permissionDecision: FlowTracePermissionDecision;
+  denyReason?: string;
+  errorCode?: string;
+  exportOptions?: FlowTraceExportOptions;
+  dataSize?: number;
+  clientInfo?: string;
+  metadata?: Record<string, unknown>;
+  serviceInstanceId?: string;
+}
+
+export interface FlowTraceAuditQueryFilter {
+  userId?: string;
+  action?: FlowTracePermissionAction;
+  sampleId?: string;
+  status?: FlowTraceOperationStatus;
+  permissionDecision?: FlowTracePermissionDecision;
+  fromTimestamp?: string;
+  toTimestamp?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface FlowTraceAuditConfig {
+  enabled: boolean;
+  logSuccess: boolean;
+  logDenied: boolean;
+  logRedacted: boolean;
+  retentionDays: number;
+  includeMetadata: boolean;
+  flushIntervalMs: number;
+  maxBufferSize: number;
+}
+
+export interface FlowTracePermissionSnapshot {
+  userId: string;
+  userRole: UserRole;
+  isRevoked: boolean;
+  revokedAt?: string;
+  revokeReason?: string;
+  restoredAt?: string;
+  grantedActions: FlowTracePermissionAction[];
+  lastCheckAt: string;
+  currentDecision: FlowTracePermissionDecision;
+  visibleFields: string[];
+  redactedFields: string[];
 }

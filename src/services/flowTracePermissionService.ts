@@ -11,17 +11,25 @@ import type {
   FlowTraceSampleSummary,
   FlowTraceDetailData,
   FlowTraceExportOptions,
+  FlowTraceAuditRecord,
+  FlowTraceAuditQueryFilter,
+  FlowTraceAuditConfig,
+  FlowTracePermissionSnapshot,
 } from '@shared/types';
 import {
   ERROR_CODES,
   FLOW_TRACE_PERMISSION_DENY_REASONS,
   FLOW_TRACE_AUDIT_ROLES,
   FLOW_TRACE_REDACTION_LEVELS,
+  DEFAULT_FLOW_TRACE_AUDIT_CONFIG,
+  FLOW_TRACE_AUDITOR_VISIBLE_FIELDS,
+  FLOW_TRACE_NON_AUDITOR_VISIBLE_FIELDS,
+  FLOW_TRACE_NON_AUDITOR_REDACTED_FIELDS,
+  STORES,
 } from '@shared/constants';
-import { generateId, nowISO } from '../lib/db';
+import { generateId, nowISO, getDB } from '../lib/db';
 import { hasPermission } from './permissionService';
 
-const PERMISSION_STATE_KEY = 'flow_trace_permission_state';
 const EXPORT_QUOTA_KEY = 'flow_trace_export_quota';
 const MAX_CONCURRENT_EXPORTS = 3;
 const MAX_EXPORTS_PER_HOUR = 10;
@@ -41,40 +49,25 @@ interface ExportQuotaCache {
   [userId: string]: ExportQuota;
 }
 
-interface OperationLogBuffer {
-  logs: FlowTraceOperationLog[];
+interface AuditLogBuffer {
+  logs: FlowTraceAuditRecord[];
   lastFlushAt: string;
+  flushTimer: ReturnType<typeof setInterval> | null;
 }
 
 let permissionStateCache: PermissionStateCache = {};
 let exportQuotaCache: ExportQuotaCache = {};
-let operationLogBuffer: OperationLogBuffer = { logs: [], lastFlushAt: nowISO() };
+let auditLogBuffer: AuditLogBuffer = { logs: [], lastFlushAt: nowISO(), flushTimer: null };
 let serviceInstanceId: string = generateId();
 let serviceStartedAt: string = nowISO();
+let auditConfig: FlowTraceAuditConfig = { ...DEFAULT_FLOW_TRACE_AUDIT_CONFIG };
+let permissionStateLoaded = false;
+let sampleIdMapping: Map<string, string> = new Map();
 
 const ACTION_TO_PERMISSION: Record<FlowTracePermissionAction, string> = {
   viewList: 'flowTrace:view',
   viewDetail: 'flowTrace:viewDetail',
   export: 'flowTrace:export',
-};
-
-const loadPermissionState = () => {
-  try {
-    const stored = localStorage.getItem(PERMISSION_STATE_KEY);
-    if (stored) {
-      permissionStateCache = JSON.parse(stored);
-    }
-  } catch {
-    permissionStateCache = {};
-  }
-};
-
-const savePermissionState = () => {
-  try {
-    localStorage.setItem(PERMISSION_STATE_KEY, JSON.stringify(permissionStateCache));
-  } catch {
-    // ignore
-  }
 };
 
 const loadExportQuota = () => {
@@ -110,11 +103,91 @@ const saveExportQuota = () => {
   }
 };
 
-loadPermissionState();
 loadExportQuota();
+
+export const loadPersistedPermissionState = async () => {
+  if (permissionStateLoaded) return;
+  try {
+    const db = await getDB();
+    const allStates = await db.getAll(STORES.flowTracePermissionState);
+    permissionStateCache = {};
+    for (const state of allStates) {
+      const { id: _id, ...rest } = state;
+      permissionStateCache[state.userId] = rest as FlowTracePermissionState;
+    }
+    permissionStateLoaded = true;
+  } catch {
+    permissionStateCache = {};
+    permissionStateLoaded = true;
+  }
+};
+
+const persistPermissionState = async (userId: string) => {
+  try {
+    const db = await getDB();
+    const state = permissionStateCache[userId];
+    if (state) {
+      await db.put(STORES.flowTracePermissionState, { id: userId, ...state });
+    }
+  } catch {
+    // ignore
+  }
+};
+
+const persistAuditRecord = async (record: FlowTraceAuditRecord) => {
+  try {
+    const db = await getDB();
+    await db.put(STORES.flowTraceAuditRecords, record);
+  } catch {
+    // ignore
+  }
+};
+
+const flushAuditBuffer = async () => {
+  if (auditLogBuffer.logs.length === 0) return;
+  const logsToFlush = [...auditLogBuffer.logs];
+  auditLogBuffer.logs = [];
+  auditLogBuffer.lastFlushAt = nowISO();
+
+  try {
+    const db = await getDB();
+    const tx = db.transaction(STORES.flowTraceAuditRecords, 'readwrite');
+    for (const log of logsToFlush) {
+      tx.objectStore(STORES.flowTraceAuditRecords).put(log);
+    }
+    await tx.done;
+  } catch {
+    for (const log of logsToFlush) {
+      auditLogBuffer.logs.push(log);
+    }
+  }
+};
+
+const scheduleAuditFlush = () => {
+  if (auditLogBuffer.flushTimer) {
+    clearInterval(auditLogBuffer.flushTimer);
+  }
+  auditLogBuffer.flushTimer = setInterval(() => {
+    flushAuditBuffer();
+  }, auditConfig.flushIntervalMs);
+};
+
+scheduleAuditFlush();
 
 export const isAuditorRole = (role: UserRole): boolean => {
   return FLOW_TRACE_AUDIT_ROLES.includes(role);
+};
+
+export const registerSampleIdMapping = (sampleNo: string, sampleId: string) => {
+  const existingId = sampleIdMapping.get(sampleNo);
+  if (existingId && existingId !== sampleId) {
+    // no-op: sample was re-imported with a new id
+  }
+  sampleIdMapping.set(sampleNo, sampleId);
+};
+
+export const resolveSampleId = (sampleNoOrId: string): string => {
+  return sampleIdMapping.get(sampleNoOrId) || sampleNoOrId;
 };
 
 export const checkFlowTracePermission = (
@@ -167,14 +240,6 @@ export const checkFlowTracePermission = (
     };
   }
 
-  if (state && state.lastCheckAt) {
-    const lastCheck = new Date(state.lastCheckAt).getTime();
-    const nowTime = new Date(now).getTime();
-    if (nowTime - lastCheck > 30 * 60 * 1000) {
-      // 超过30分钟，需要重新验证
-    }
-  }
-
   const decision: FlowTracePermissionDecision = isAuditorRole(user.role) ? 'allow' : 'redact';
   const reason = decision === 'allow'
     ? '审核员权限，允许完整访问'
@@ -189,7 +254,7 @@ export const checkFlowTracePermission = (
     revokedAt: state?.revokedAt,
     revokeReason: state?.revokeReason,
   };
-  savePermissionState();
+  persistPermissionState(user.id);
 
   return {
     ...baseResult,
@@ -208,6 +273,19 @@ export const checkServiceRestartReauth = (
   const startedAt = new Date(serviceStartedAt).getTime();
 
   if (lastAccess < startedAt) {
+    const state = user ? permissionStateCache[user.id] : null;
+    if (state && state.revokedAt) {
+      return {
+        action: 'viewList',
+        userId: user?.id || '',
+        userRole: user?.role || 'collector',
+        timestamp: nowISO(),
+        decision: 'deny',
+        reason: state.revokeReason || FLOW_TRACE_PERMISSION_DENY_REASONS.PERMISSION_REVOKED,
+        errorCode: ERROR_CODES.INSUFFICIENT_PERMISSION,
+      };
+    }
+
     return {
       action: 'viewList',
       userId: user?.id || '',
@@ -242,6 +320,22 @@ export const checkPermissionMidOperation = (
   return null;
 };
 
+export const checkPermissionRestoredMidOperation = (
+  user: User | null,
+  action: FlowTracePermissionAction,
+  operationStartAt: string
+): { restored: boolean; newDecision: FlowTracePermissionDecision } | null => {
+  const state = user ? permissionStateCache[user.id] : null;
+  if (!state) return null;
+
+  if (state.restoredAt && new Date(state.restoredAt).getTime() >= new Date(operationStartAt).getTime()) {
+    const newDecision = isAuditorRole(user?.role || 'collector') ? 'allow' : 'redact';
+    return { restored: true, newDecision };
+  }
+
+  return null;
+};
+
 export const acquireExportSlot = (
   user: User | null
 ): { allowed: boolean; operationId: string; reason?: string } => {
@@ -262,6 +356,15 @@ export const acquireExportSlot = (
       count: 0,
       windowStart: now,
       concurrentExports: new Set(),
+    };
+  }
+
+  const state = permissionStateCache[user.id];
+  if (state && state.revokedAt && state.revokedAt <= now) {
+    return {
+      allowed: false,
+      operationId,
+      reason: state.revokeReason || FLOW_TRACE_PERMISSION_DENY_REASONS.PERMISSION_REVOKED,
     };
   }
 
@@ -506,27 +609,134 @@ export const createOperationLog = (params: {
     clientInfo: `service:${serviceInstanceId}`,
   };
 
-  operationLogBuffer.logs.push(log);
+  if (auditConfig.enabled) {
+    const shouldLog = (
+      (params.status === 'success' && auditConfig.logSuccess) ||
+      (params.status === 'denied' && auditConfig.logDenied) ||
+      (params.status === 'redacted' && auditConfig.logRedacted) ||
+      params.status === 'error'
+    );
 
-  if (operationLogBuffer.logs.length >= 10) {
-    flushOperationLogs();
+    if (shouldLog) {
+      const auditRecord: FlowTraceAuditRecord = {
+        id: log.id,
+        operationId,
+        userId: params.user?.id || '',
+        username: params.user?.username || '',
+        userRole: params.user?.role || 'collector',
+        action: params.action,
+        sampleId: params.sampleId,
+        sampleNo: params.sampleNo,
+        timestamp: log.timestamp,
+        status: params.status,
+        permissionDecision: params.permissionDecision,
+        denyReason: params.denyReason,
+        errorCode: params.errorCode,
+        exportOptions: params.exportOptions,
+        dataSize: params.dataSize,
+        clientInfo: `service:${serviceInstanceId}`,
+        serviceInstanceId,
+        metadata: auditConfig.includeMetadata ? {
+          serviceStartedAt,
+          auditConfigEnabled: auditConfig.enabled,
+        } : undefined,
+      };
+
+      auditLogBuffer.logs.push(auditRecord);
+
+      if (auditLogBuffer.logs.length >= auditConfig.maxBufferSize) {
+        flushAuditBuffer();
+      }
+    }
   }
 
   return log;
 };
 
 export const flushOperationLogs = () => {
-  const logsToFlush = [...operationLogBuffer.logs];
-  operationLogBuffer.logs = [];
-  operationLogBuffer.lastFlushAt = nowISO();
+  const logsToFlush = [...auditLogBuffer.logs];
+  auditLogBuffer.logs = [];
+  auditLogBuffer.lastFlushAt = nowISO();
   return logsToFlush;
 };
 
 export const getOperationLogs = (): FlowTraceOperationLog[] => {
-  return [...operationLogBuffer.logs];
+  return [...auditLogBuffer.logs];
 };
 
-export const revokePermission = (userId: string, reason: string) => {
+export const queryAuditRecords = async (filter?: FlowTraceAuditQueryFilter): Promise<FlowTraceAuditRecord[]> => {
+  await flushAuditBuffer();
+
+  try {
+    const db = await getDB();
+    let records = await db.getAll(STORES.flowTraceAuditRecords);
+
+    if (filter) {
+      if (filter.userId) {
+        records = records.filter((r) => r.userId === filter.userId);
+      }
+      if (filter.action) {
+        records = records.filter((r) => r.action === filter.action);
+      }
+      if (filter.sampleId) {
+        records = records.filter((r) => r.sampleId === filter.sampleId);
+      }
+      if (filter.status) {
+        records = records.filter((r) => r.status === filter.status);
+      }
+      if (filter.permissionDecision) {
+        records = records.filter((r) => r.permissionDecision === filter.permissionDecision);
+      }
+      if (filter.fromTimestamp) {
+        records = records.filter((r) => r.timestamp >= filter.fromTimestamp!);
+      }
+      if (filter.toTimestamp) {
+        records = records.filter((r) => r.timestamp <= filter.toTimestamp!);
+      }
+    }
+
+    records.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+    if (filter?.limit) {
+      const offset = filter.offset || 0;
+      records = records.slice(offset, offset + filter.limit);
+    }
+
+    return records;
+  } catch {
+    return [];
+  }
+};
+
+export const getPermissionSnapshot = (user: User | null): FlowTracePermissionSnapshot | null => {
+  if (!user) return null;
+
+  const state = permissionStateCache[user.id];
+  const isRevoked = !!(state?.revokedAt);
+  const isAuditor = isAuditorRole(user.role);
+
+  const currentDecision = isRevoked
+    ? 'deny'
+    : isAuditor
+      ? 'allow'
+      : 'redact';
+
+  return {
+    userId: user.id,
+    userRole: user.role,
+    isRevoked,
+    revokedAt: state?.revokedAt,
+    revokeReason: state?.revokeReason,
+    restoredAt: state?.restoredAt,
+    grantedActions: state?.grantedActions || [],
+    lastCheckAt: state?.lastCheckAt || '',
+    currentDecision,
+    visibleFields: isAuditor ? FLOW_TRACE_AUDITOR_VISIBLE_FIELDS : FLOW_TRACE_NON_AUDITOR_VISIBLE_FIELDS,
+    redactedFields: isAuditor ? [] : FLOW_TRACE_NON_AUDITOR_REDACTED_FIELDS,
+  };
+};
+
+export const revokePermission = async (userId: string, reason: string) => {
   const state = permissionStateCache[userId] || {
     userId,
     lastCheckAt: nowISO(),
@@ -535,15 +745,16 @@ export const revokePermission = (userId: string, reason: string) => {
   state.revokedAt = nowISO();
   state.revokeReason = reason;
   permissionStateCache[userId] = state;
-  savePermissionState();
+  await persistPermissionState(userId);
 };
 
-export const restorePermission = (userId: string) => {
+export const restorePermission = async (userId: string) => {
   const state = permissionStateCache[userId];
   if (state) {
     delete state.revokedAt;
     delete state.revokeReason;
-    savePermissionState();
+    state.restoredAt = nowISO();
+    await persistPermissionState(userId);
   }
 };
 
@@ -567,16 +778,32 @@ export const getServiceStatus = () => {
     startedAt: serviceStartedAt,
     permissionStates: Object.keys(permissionStateCache).length,
     activeExports: Object.values(exportQuotaCache).reduce((sum, q) => sum + q.concurrentExports.size, 0),
-    bufferedLogs: operationLogBuffer.logs.length,
+    bufferedLogs: auditLogBuffer.logs.length,
   };
 };
 
+export const getAuditConfig = (): FlowTraceAuditConfig => {
+  return { ...auditConfig };
+};
+
+export const updateAuditConfig = (updates: Partial<FlowTraceAuditConfig>) => {
+  auditConfig = { ...auditConfig, ...updates };
+  if (updates.flushIntervalMs) {
+    scheduleAuditFlush();
+  }
+};
+
 export const resetServiceState = () => {
+  if (auditLogBuffer.flushTimer) {
+    clearInterval(auditLogBuffer.flushTimer);
+  }
   serviceInstanceId = generateId();
   serviceStartedAt = nowISO();
   permissionStateCache = {};
   exportQuotaCache = {};
-  operationLogBuffer = { logs: [], lastFlushAt: nowISO() };
-  localStorage.removeItem(PERMISSION_STATE_KEY);
+  auditLogBuffer = { logs: [], lastFlushAt: nowISO(), flushTimer: null };
+  sampleIdMapping = new Map();
+  permissionStateLoaded = false;
   localStorage.removeItem(EXPORT_QUOTA_KEY);
+  scheduleAuditFlush();
 };

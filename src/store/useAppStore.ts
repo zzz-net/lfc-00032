@@ -26,6 +26,10 @@ import type {
   FlowTracePermissionEnvelope,
   FlowTraceOperationLog,
   FlowTracePermissionCheck,
+  FlowTraceAuditRecord,
+  FlowTraceAuditQueryFilter,
+  FlowTraceAuditConfig,
+  FlowTracePermissionSnapshot,
 } from '@shared/types';
 import { getDB, generateId, nowISO } from '../lib/db';
 import { createInitialUsers, createInitialLocations } from '../lib/seed';
@@ -66,6 +70,12 @@ import {
   restorePermission,
   getOperationLogs,
   getServiceStatus,
+  loadPersistedPermissionState,
+  queryAuditRecords,
+  getPermissionSnapshot,
+  getAuditConfig,
+  updateAuditConfig,
+  registerSampleIdMapping,
 } from '../services/flowTracePermissionService';
 import Papa from 'papaparse';
 
@@ -163,8 +173,12 @@ interface AppState {
   ) => Promise<FlowTracePermissionEnvelope<string>>;
   getFlowTraceOperationLogs: () => FlowTraceOperationLog[];
   getFlowTraceServiceStatus: () => ReturnType<typeof getServiceStatus>;
-  revokeFlowTracePermission: (userId: string, reason: string) => void;
-  restoreFlowTracePermission: (userId: string) => void;
+  revokeFlowTracePermission: (userId: string, reason: string) => Promise<void>;
+  restoreFlowTracePermission: (userId: string) => Promise<void>;
+  queryFlowTraceAuditRecords: (filter?: FlowTraceAuditQueryFilter) => Promise<FlowTraceAuditRecord[]>;
+  getFlowTracePermissionSnapshot: () => FlowTracePermissionSnapshot | null;
+  getFlowTraceAuditConfig: () => FlowTraceAuditConfig;
+  updateFlowTraceAuditConfig: (updates: Partial<FlowTraceAuditConfig>) => void;
 
   getSampleById: (id: string) => Sample | undefined;
   getLocationById: (id: string) => Location | undefined;
@@ -241,6 +255,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set({ isInitialized: true });
     await get().restoreSession();
+    await loadPersistedPermissionState();
   },
 
   login: async (username: string, password: string) => {
@@ -487,6 +502,7 @@ export const useAppStore = create<AppState>((set, get) => ({
               updatedAt: now,
             };
             tx.objectStore(STORES.samples).put(sample);
+            registerSampleIdMapping(row.sampleNo, sampleId);
 
             const transfer: TransferRecord = {
               id: generateId(),
@@ -1754,6 +1770,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const currentUser = get().currentUser;
     const operationStartAt = nowISO();
 
+    await loadPersistedPermissionState();
+
     const restartCheck = checkServiceRestartReauth(currentUser);
     if (restartCheck) {
       createOperationLog({
@@ -2213,6 +2231,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const currentUser = get().currentUser;
     const operationStartAt = nowISO();
 
+    await loadPersistedPermissionState();
+
     const restartCheck = checkServiceRestartReauth(currentUser);
     if (restartCheck) {
       createOperationLog({
@@ -2572,6 +2592,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const operationStartAt = nowISO();
     let exportOperationId = '';
 
+    await loadPersistedPermissionState();
+
     const slotResult = acquireExportSlot(currentUser);
     exportOperationId = slotResult.operationId;
 
@@ -2717,8 +2739,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     return getServiceStatus();
   },
 
-  revokeFlowTracePermission: (userId, reason) => {
-    revokePermission(userId, reason);
+  revokeFlowTracePermission: async (userId, reason) => {
+    await revokePermission(userId, reason);
     get().addAuditLog(
       'flowTrace:revokePermission',
       'user',
@@ -2727,14 +2749,30 @@ export const useAppStore = create<AppState>((set, get) => ({
     );
   },
 
-  restoreFlowTracePermission: (userId) => {
-    restorePermission(userId);
+  restoreFlowTracePermission: async (userId) => {
+    await restorePermission(userId);
     get().addAuditLog(
       'flowTrace:restorePermission',
       'user',
       { userId },
       userId
     );
+  },
+
+  queryFlowTraceAuditRecords: async (filter) => {
+    return queryAuditRecords(filter);
+  },
+
+  getFlowTracePermissionSnapshot: () => {
+    return getPermissionSnapshot(get().currentUser);
+  },
+
+  getFlowTraceAuditConfig: () => {
+    return getAuditConfig();
+  },
+
+  updateFlowTraceAuditConfig: (updates) => {
+    updateAuditConfig(updates);
   },
 
   getSampleById: (id) => get().samples.find((s) => s.id === id),

@@ -7,6 +7,8 @@ import type {
   TransferRecord,
   FailedTransfer,
   AuditLog,
+  FlowTraceAuditRecord,
+  FlowTracePermissionState,
 } from '@shared/types';
 import { DB_NAME, DB_VERSION, STORES } from '@shared/constants';
 
@@ -55,6 +57,23 @@ export interface SampleTrackingDBSchema {
     key: string;
     value: AuditLog;
     indexes: { 'by-timestamp': string; 'by-userId': string; 'by-action': string };
+  };
+  flowTraceAuditRecords: {
+    key: string;
+    value: FlowTraceAuditRecord;
+    indexes: {
+      'by-timestamp': string;
+      'by-userId': string;
+      'by-action': string;
+      'by-sampleId': string;
+      'by-status': string;
+      'by-operationId': string;
+    };
+  };
+  flowTracePermissionState: {
+    key: string;
+    value: FlowTracePermissionState & { id: string };
+    indexes: { 'by-userId': string };
   };
 }
 
@@ -118,6 +137,21 @@ export const getDB = async (): Promise<IDBPDatabase<SampleTrackingDBSchema>> => 
         auditStore.createIndex('by-timestamp', 'timestamp');
         auditStore.createIndex('by-userId', 'userId');
         auditStore.createIndex('by-action', 'action');
+      }
+
+      if (!db.objectStoreNames.contains(STORES.flowTraceAuditRecords)) {
+        const ftAuditStore = db.createObjectStore(STORES.flowTraceAuditRecords, { keyPath: 'id' });
+        ftAuditStore.createIndex('by-timestamp', 'timestamp');
+        ftAuditStore.createIndex('by-userId', 'userId');
+        ftAuditStore.createIndex('by-action', 'action');
+        ftAuditStore.createIndex('by-sampleId', 'sampleId');
+        ftAuditStore.createIndex('by-status', 'status');
+        ftAuditStore.createIndex('by-operationId', 'operationId');
+      }
+
+      if (!db.objectStoreNames.contains(STORES.flowTracePermissionState)) {
+        const ftPermStore = db.createObjectStore(STORES.flowTracePermissionState, { keyPath: 'id' });
+        ftPermStore.createIndex('by-userId', 'userId');
       }
     },
   });
