@@ -1,0 +1,1338 @@
+{
+  "users": [
+    {
+      "id": "mqnj6l88_dss2png1",
+      "username": "admin",
+      "role": "admin",
+      "displayName": "系统管理员",
+      "passwordHash": "hash_56760663_6",
+      "createdAt": "2026-06-21T08:34:53.048Z"
+    },
+    {
+      "id": "mqnj6l88_ajg4oig7",
+      "username": "collector01",
+      "role": "collector",
+      "displayName": "张采集",
+      "passwordHash": "hash_56760663_6",
+      "createdAt": "2026-06-21T08:34:53.048Z"
+    },
+    {
+      "id": "mqnj6l88_tot7ib64",
+      "username": "warehouse01",
+      "role": "warehouse",
+      "displayName": "李库管",
+      "passwordHash": "hash_56760663_6",
+      "createdAt": "2026-06-21T08:34:53.048Z"
+    },
+    {
+      "id": "mqnj6l88_kkq2qw2s",
+      "username": "tester01",
+      "role": "tester",
+      "displayName": "王检测",
+      "passwordHash": "hash_56760663_6",
+      "createdAt": "2026-06-21T08:34:53.048Z"
+    },
+    {
+      "id": "mqnj6l88_3q4uqmyf",
+      "username": "auditor01",
+      "role": "auditor",
+      "displayName": "赵审核",
+      "passwordHash": "hash_56760663_6",
+      "createdAt": "2026-06-21T08:34:53.048Z"
+    }
+  ],
+  "batches": [
+    {
+      "id": "mqnj6las_fei62jwg",
+      "batchNo": "BATCH-TEST-FLD01",
+      "importedAt": "2026-06-21T08:34:53.140Z",
+      "importedBy": "mqnj6l88_ajg4oig7",
+      "sampleCount": 1,
+      "remark": "Test batch"
+    },
+    {
+      "id": "mqnj6lcu_jpujm2h1",
+      "batchNo": "BATCH-TEST-REV01",
+      "importedAt": "2026-06-21T08:34:53.214Z",
+      "importedBy": "mqnj6l88_ajg4oig7",
+      "sampleCount": 1,
+      "remark": "Test batch"
+    },
+    {
+      "id": "mqnj6lf2_pvbqowed",
+      "batchNo": "BATCH-TEST-CONS01",
+      "importedAt": "2026-06-21T08:34:53.294Z",
+      "importedBy": "mqnj6l88_ajg4oig7",
+      "sampleCount": 1,
+      "remark": "Test batch"
+    },
+    {
+      "id": "mqnj6lia_ioi21v2a",
+      "batchNo": "BATCH-TEST-AUD01",
+      "importedAt": "2026-06-21T08:34:53.410Z",
+      "importedBy": "mqnj6l88_ajg4oig7",
+      "sampleCount": 1,
+      "remark": "Test batch"
+    }
+  ],
+  "samples": [
+    {
+      "id": "mqnj6lat_nshewlol",
+      "sampleNo": "TEST-S-FLD01",
+      "batchId": "mqnj6las_fei62jwg",
+      "type": "血液",
+      "collectedAt": "2026-06-20T08:34:53.141Z",
+      "collectedBy": "张采集",
+      "description": "Test sample FLD01",
+      "currentStatus": "archived",
+      "currentLocationId": "mqnj6l8c_0qnojnd1",
+      "currentHolderId": "mqnj6l88_3q4uqmyf",
+      "isArchived": true,
+      "archivedAt": "2026-06-21T08:34:53.140Z",
+      "reviewedBy": "mqnj6l88_3q4uqmyf",
+      "reviewedAt": "2026-06-21T08:34:53.140Z",
+      "createdAt": "2026-06-20T08:34:53.141Z",
+      "updatedAt": "2026-06-21T08:34:53.140Z"
+    },
+    {
+      "id": "mqnj6lcu_91hf1iow",
+      "sampleNo": "TEST-S-REV01",
+      "batchId": "mqnj6lcu_jpujm2h1",
+      "type": "血液",
+      "collectedAt": "2026-06-20T08:34:53.214Z",
+      "collectedBy": "张采集",
+      "description": "Test sample REV01",
+      "currentStatus": "archived",
+      "currentLocationId": "mqnj6l8c_0qnojnd1",
+      "currentHolderId": "mqnj6l88_3q4uqmyf",
+      "isArchived": true,
+      "archivedAt": "2026-06-21T08:34:53.214Z",
+      "reviewedBy": "mqnj6l88_3q4uqmyf",
+      "reviewedAt": "2026-06-21T08:34:53.214Z",
+      "createdAt": "2026-06-20T08:34:53.214Z",
+      "updatedAt": "2026-06-21T08:34:53.214Z"
+    },
+    {
+      "id": "mqnj6lf3_eeru9v70",
+      "sampleNo": "TEST-S-CONS01",
+      "batchId": "mqnj6lf2_pvbqowed",
+      "type": "血液",
+      "collectedAt": "2026-06-20T08:34:53.295Z",
+      "collectedBy": "张采集",
+      "description": "Test sample CONS01",
+      "currentStatus": "archived",
+      "currentLocationId": "mqnj6l8c_0qnojnd1",
+      "currentHolderId": "mqnj6l88_3q4uqmyf",
+      "isArchived": true,
+      "archivedAt": "2026-06-21T08:34:53.294Z",
+      "reviewedBy": "mqnj6l88_3q4uqmyf",
+      "reviewedAt": "2026-06-21T08:34:53.294Z",
+      "createdAt": "2026-06-20T08:34:53.295Z",
+      "updatedAt": "2026-06-21T08:34:53.294Z"
+    },
+    {
+      "id": "mqnj6lh4_2dklxl27",
+      "sampleNo": "DUP-TEST-001",
+      "batchId": "mqnj6lh4_dj1p392o",
+      "type": "血液",
+      "collectedAt": "2026-06-18T08:34:53.368Z",
+      "collectedBy": "张采集",
+      "description": "first version",
+      "currentStatus": "imported",
+      "createdAt": "2026-06-18T08:34:53.368Z",
+      "updatedAt": "2026-06-18T08:34:53.368Z"
+    },
+    {
+      "id": "mqnj6lhn_8nd3z3kb",
+      "sampleNo": "DUP-TEST-001",
+      "batchId": "mqnj6lhn_ftr6u9zk",
+      "type": "血液",
+      "collectedAt": "2026-06-20T08:34:53.387Z",
+      "collectedBy": "张采集",
+      "description": "reimported version",
+      "currentStatus": "archived",
+      "currentLocationId": "mqnj6l8c_0qnojnd1",
+      "currentHolderId": "mqnj6l88_3q4uqmyf",
+      "isArchived": true,
+      "archivedAt": "2026-06-21T08:34:53.387Z",
+      "reviewedBy": "mqnj6l88_3q4uqmyf",
+      "reviewedAt": "2026-06-21T08:34:53.387Z",
+      "createdAt": "2026-06-20T08:34:53.387Z",
+      "updatedAt": "2026-06-21T08:34:53.387Z"
+    },
+    {
+      "id": "mqnj6lib_dlfxif23",
+      "sampleNo": "TEST-S-AUD01",
+      "batchId": "mqnj6lia_ioi21v2a",
+      "type": "血液",
+      "collectedAt": "2026-06-20T08:34:53.411Z",
+      "collectedBy": "张采集",
+      "description": "Test sample AUD01",
+      "currentStatus": "archived",
+      "currentLocationId": "mqnj6l8c_0qnojnd1",
+      "currentHolderId": "mqnj6l88_3q4uqmyf",
+      "isArchived": true,
+      "archivedAt": "2026-06-21T08:34:53.410Z",
+      "reviewedBy": "mqnj6l88_3q4uqmyf",
+      "reviewedAt": "2026-06-21T08:34:53.410Z",
+      "createdAt": "2026-06-20T08:34:53.411Z",
+      "updatedAt": "2026-06-21T08:34:53.410Z"
+    }
+  ],
+  "locations": [
+    {
+      "id": "mqnj6l8c_76ixn2rf",
+      "code": "WH-A-01",
+      "name": "A区存储库位01",
+      "type": "storage",
+      "capacity": 50,
+      "status": "active",
+      "description": "A区1号常温存储架",
+      "createdAt": "2026-06-21T08:34:53.052Z",
+      "updatedAt": "2026-06-21T08:34:53.052Z"
+    },
+    {
+      "id": "mqnj6l8c_6mr8loj0",
+      "code": "WH-A-02",
+      "name": "A区存储库位02",
+      "type": "storage",
+      "capacity": 50,
+      "status": "active",
+      "description": "A区2号常温存储架",
+      "createdAt": "2026-06-21T08:34:53.052Z",
+      "updatedAt": "2026-06-21T08:34:53.052Z"
+    },
+    {
+      "id": "mqnj6l8c_kj8nh9pu",
+      "code": "WH-B-01",
+      "name": "B区冷藏库位01",
+      "type": "storage",
+      "capacity": 30,
+      "status": "active",
+      "description": "B区1号冷藏存储柜（2-8℃）",
+      "createdAt": "2026-06-21T08:34:53.052Z",
+      "updatedAt": "2026-06-21T08:34:53.052Z"
+    },
+    {
+      "id": "mqnj6l8c_zqd5ywux",
+      "code": "WH-B-02",
+      "name": "B区冷藏库位02",
+      "type": "storage",
+      "capacity": 30,
+      "status": "inactive",
+      "description": "B区2号冷藏存储柜（维护中）",
+      "createdAt": "2026-06-21T08:34:53.052Z",
+      "updatedAt": "2026-06-21T08:34:53.052Z"
+    },
+    {
+      "id": "mqnj6l8c_hac73wam",
+      "code": "LAB-01",
+      "name": "检测实验室01",
+      "type": "testing",
+      "capacity": 100,
+      "status": "active",
+      "description": "一号检测实验室接收区",
+      "createdAt": "2026-06-21T08:34:53.052Z",
+      "updatedAt": "2026-06-21T08:34:53.052Z"
+    },
+    {
+      "id": "mqnj6l8c_loh29jj8",
+      "code": "LAB-02",
+      "name": "检测实验室02",
+      "type": "testing",
+      "capacity": 100,
+      "status": "active",
+      "description": "二号检测实验室接收区",
+      "createdAt": "2026-06-21T08:34:53.052Z",
+      "updatedAt": "2026-06-21T08:34:53.052Z"
+    },
+    {
+      "id": "mqnj6l8c_0qnojnd1",
+      "code": "ARC-01",
+      "name": "长期归档区",
+      "type": "archive",
+      "capacity": 500,
+      "status": "active",
+      "description": "样本长期归档保存区",
+      "createdAt": "2026-06-21T08:34:53.052Z",
+      "updatedAt": "2026-06-21T08:34:53.052Z"
+    }
+  ],
+  "transferRecords": [
+    {
+      "id": "mqnj6lau_lotm0vmg",
+      "sampleId": "mqnj6lat_nshewlol",
+      "type": "import",
+      "toStatus": "imported",
+      "operatorId": "mqnj6l88_ajg4oig7",
+      "operatedAt": "2026-06-20T08:34:53.141Z",
+      "remark": "import",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lau_p9qeoma2",
+      "sampleId": "mqnj6lat_nshewlol",
+      "type": "inbound",
+      "fromStatus": "imported",
+      "toStatus": "in_stock",
+      "toLocationId": "mqnj6l8c_76ixn2rf",
+      "toHolderId": "mqnj6l88_tot7ib64",
+      "operatorId": "mqnj6l88_tot7ib64",
+      "operatedAt": "2026-06-20T09:34:53.142Z",
+      "remark": "入库",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lav_qdolhr2m",
+      "sampleId": "mqnj6lat_nshewlol",
+      "type": "outbound",
+      "fromStatus": "in_stock",
+      "toStatus": "in_transit",
+      "fromLocationId": "mqnj6l8c_76ixn2rf",
+      "fromHolderId": "mqnj6l88_tot7ib64",
+      "toHolderId": "mqnj6l88_kkq2qw2s",
+      "operatorId": "mqnj6l88_tot7ib64",
+      "operatedAt": "2026-06-20T10:34:53.143Z",
+      "remark": "出库",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6law_43p13ugw",
+      "sampleId": "mqnj6lat_nshewlol",
+      "type": "test_receive",
+      "fromStatus": "in_transit",
+      "toStatus": "testing",
+      "toLocationId": "mqnj6l8c_hac73wam",
+      "toHolderId": "mqnj6l88_kkq2qw2s",
+      "operatorId": "mqnj6l88_kkq2qw2s",
+      "operatedAt": "2026-06-20T11:34:53.144Z",
+      "remark": "接收",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lax_hfe591ah",
+      "sampleId": "mqnj6lat_nshewlol",
+      "type": "test_complete",
+      "fromStatus": "testing",
+      "toStatus": "tested",
+      "operatorId": "mqnj6l88_kkq2qw2s",
+      "operatedAt": "2026-06-20T12:34:53.145Z",
+      "remark": "完成",
+      "testResult": "合格",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lay_87mgle58",
+      "sampleId": "mqnj6lat_nshewlol",
+      "type": "archive",
+      "fromStatus": "tested",
+      "toStatus": "archived",
+      "fromLocationId": "mqnj6l8c_hac73wam",
+      "toLocationId": "mqnj6l8c_0qnojnd1",
+      "operatorId": "mqnj6l88_3q4uqmyf",
+      "operatedAt": "2026-06-20T13:34:53.146Z",
+      "remark": "归档",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lcv_nknfdq0f",
+      "sampleId": "mqnj6lcu_91hf1iow",
+      "type": "import",
+      "toStatus": "imported",
+      "operatorId": "mqnj6l88_ajg4oig7",
+      "operatedAt": "2026-06-20T08:34:53.214Z",
+      "remark": "import",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lcw_ad1yu9og",
+      "sampleId": "mqnj6lcu_91hf1iow",
+      "type": "inbound",
+      "fromStatus": "imported",
+      "toStatus": "in_stock",
+      "toLocationId": "mqnj6l8c_76ixn2rf",
+      "toHolderId": "mqnj6l88_tot7ib64",
+      "operatorId": "mqnj6l88_tot7ib64",
+      "operatedAt": "2026-06-20T09:34:53.216Z",
+      "remark": "入库",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lcx_j9dy0vlu",
+      "sampleId": "mqnj6lcu_91hf1iow",
+      "type": "outbound",
+      "fromStatus": "in_stock",
+      "toStatus": "in_transit",
+      "fromLocationId": "mqnj6l8c_76ixn2rf",
+      "fromHolderId": "mqnj6l88_tot7ib64",
+      "toHolderId": "mqnj6l88_kkq2qw2s",
+      "operatorId": "mqnj6l88_tot7ib64",
+      "operatedAt": "2026-06-20T10:34:53.217Z",
+      "remark": "出库",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lcy_a62hsu0e",
+      "sampleId": "mqnj6lcu_91hf1iow",
+      "type": "test_receive",
+      "fromStatus": "in_transit",
+      "toStatus": "testing",
+      "toLocationId": "mqnj6l8c_hac73wam",
+      "toHolderId": "mqnj6l88_kkq2qw2s",
+      "operatorId": "mqnj6l88_kkq2qw2s",
+      "operatedAt": "2026-06-20T11:34:53.218Z",
+      "remark": "接收",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lcy_ohd7lstg",
+      "sampleId": "mqnj6lcu_91hf1iow",
+      "type": "test_complete",
+      "fromStatus": "testing",
+      "toStatus": "tested",
+      "operatorId": "mqnj6l88_kkq2qw2s",
+      "operatedAt": "2026-06-20T12:34:53.218Z",
+      "remark": "完成",
+      "testResult": "合格",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lcz_svfhsqwt",
+      "sampleId": "mqnj6lcu_91hf1iow",
+      "type": "archive",
+      "fromStatus": "tested",
+      "toStatus": "archived",
+      "fromLocationId": "mqnj6l8c_hac73wam",
+      "toLocationId": "mqnj6l8c_0qnojnd1",
+      "operatorId": "mqnj6l88_3q4uqmyf",
+      "operatedAt": "2026-06-20T13:34:53.219Z",
+      "remark": "归档",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lf4_i4dg213m",
+      "sampleId": "mqnj6lf3_eeru9v70",
+      "type": "import",
+      "toStatus": "imported",
+      "operatorId": "mqnj6l88_ajg4oig7",
+      "operatedAt": "2026-06-20T08:34:53.295Z",
+      "remark": "import",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lf5_yigryogn",
+      "sampleId": "mqnj6lf3_eeru9v70",
+      "type": "inbound",
+      "fromStatus": "imported",
+      "toStatus": "in_stock",
+      "toLocationId": "mqnj6l8c_76ixn2rf",
+      "toHolderId": "mqnj6l88_tot7ib64",
+      "operatorId": "mqnj6l88_tot7ib64",
+      "operatedAt": "2026-06-20T09:34:53.297Z",
+      "remark": "入库",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lf5_agc25dpm",
+      "sampleId": "mqnj6lf3_eeru9v70",
+      "type": "outbound",
+      "fromStatus": "in_stock",
+      "toStatus": "in_transit",
+      "fromLocationId": "mqnj6l8c_76ixn2rf",
+      "fromHolderId": "mqnj6l88_tot7ib64",
+      "toHolderId": "mqnj6l88_kkq2qw2s",
+      "operatorId": "mqnj6l88_tot7ib64",
+      "operatedAt": "2026-06-20T10:34:53.297Z",
+      "remark": "出库",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lf6_0qg80blm",
+      "sampleId": "mqnj6lf3_eeru9v70",
+      "type": "test_receive",
+      "fromStatus": "in_transit",
+      "toStatus": "testing",
+      "toLocationId": "mqnj6l8c_hac73wam",
+      "toHolderId": "mqnj6l88_kkq2qw2s",
+      "operatorId": "mqnj6l88_kkq2qw2s",
+      "operatedAt": "2026-06-20T11:34:53.298Z",
+      "remark": "接收",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lf7_7hd0mnaj",
+      "sampleId": "mqnj6lf3_eeru9v70",
+      "type": "test_complete",
+      "fromStatus": "testing",
+      "toStatus": "tested",
+      "operatorId": "mqnj6l88_kkq2qw2s",
+      "operatedAt": "2026-06-20T12:34:53.299Z",
+      "remark": "完成",
+      "testResult": "合格",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lf8_85cdlhge",
+      "sampleId": "mqnj6lf3_eeru9v70",
+      "type": "archive",
+      "fromStatus": "tested",
+      "toStatus": "archived",
+      "fromLocationId": "mqnj6l8c_hac73wam",
+      "toLocationId": "mqnj6l8c_0qnojnd1",
+      "operatorId": "mqnj6l88_3q4uqmyf",
+      "operatedAt": "2026-06-20T13:34:53.300Z",
+      "remark": "归档",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lic_v7t7jvbh",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "type": "import",
+      "toStatus": "imported",
+      "operatorId": "mqnj6l88_ajg4oig7",
+      "operatedAt": "2026-06-20T08:34:53.411Z",
+      "remark": "import",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lid_cvxyxu96",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "type": "inbound",
+      "fromStatus": "imported",
+      "toStatus": "in_stock",
+      "toLocationId": "mqnj6l8c_76ixn2rf",
+      "toHolderId": "mqnj6l88_tot7ib64",
+      "operatorId": "mqnj6l88_tot7ib64",
+      "operatedAt": "2026-06-20T09:34:53.413Z",
+      "remark": "入库",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lie_onpeteqb",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "type": "outbound",
+      "fromStatus": "in_stock",
+      "toStatus": "in_transit",
+      "fromLocationId": "mqnj6l8c_76ixn2rf",
+      "fromHolderId": "mqnj6l88_tot7ib64",
+      "toHolderId": "mqnj6l88_kkq2qw2s",
+      "operatorId": "mqnj6l88_tot7ib64",
+      "operatedAt": "2026-06-20T10:34:53.414Z",
+      "remark": "出库",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lif_33zloadr",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "type": "test_receive",
+      "fromStatus": "in_transit",
+      "toStatus": "testing",
+      "toLocationId": "mqnj6l8c_hac73wam",
+      "toHolderId": "mqnj6l88_kkq2qw2s",
+      "operatorId": "mqnj6l88_kkq2qw2s",
+      "operatedAt": "2026-06-20T11:34:53.415Z",
+      "remark": "接收",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lig_uqrzvwr4",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "type": "test_complete",
+      "fromStatus": "testing",
+      "toStatus": "tested",
+      "operatorId": "mqnj6l88_kkq2qw2s",
+      "operatedAt": "2026-06-20T12:34:53.416Z",
+      "remark": "完成",
+      "testResult": "合格",
+      "isRolledBack": false
+    },
+    {
+      "id": "mqnj6lih_uzo4tj2i",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "type": "archive",
+      "fromStatus": "tested",
+      "toStatus": "archived",
+      "fromLocationId": "mqnj6l8c_hac73wam",
+      "toLocationId": "mqnj6l8c_0qnojnd1",
+      "operatorId": "mqnj6l88_3q4uqmyf",
+      "operatedAt": "2026-06-20T13:34:53.417Z",
+      "remark": "归档",
+      "isRolledBack": false
+    }
+  ],
+  "failedTransfers": [],
+  "auditLogs": [
+    {
+      "id": "mqnj6l9i_saejpvoh",
+      "timestamp": "2026-06-21T08:34:53.093Z",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "auditor01"
+      }
+    },
+    {
+      "id": "mqnj6la3_io4pf42w",
+      "timestamp": "2026-06-21T08:34:53.115Z",
+      "userId": "mqnj6l88_tot7ib64",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "warehouse01"
+      }
+    },
+    {
+      "id": "mqnj6lai_t4c9b21j",
+      "timestamp": "2026-06-21T08:34:53.130Z",
+      "userId": "mqnj6l88_tot7ib64",
+      "action": "logout",
+      "targetType": "user",
+      "details": {
+        "username": "warehouse01"
+      }
+    },
+    {
+      "id": "mqnj6lb5_1tvmv7ht",
+      "timestamp": "2026-06-21T08:34:53.152Z",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "auditor01"
+      }
+    },
+    {
+      "id": "mqnj6lbw_kyaedqee",
+      "timestamp": "2026-06-21T08:34:53.180Z",
+      "userId": "mqnj6l88_tot7ib64",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "warehouse01"
+      }
+    },
+    {
+      "id": "mqnj6lca_petbzr3c",
+      "timestamp": "2026-06-21T08:34:53.193Z",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "auditor01"
+      }
+    },
+    {
+      "id": "mqnj6lcl_xx6l560s",
+      "timestamp": "2026-06-21T08:34:53.205Z",
+      "userId": "mqnj6l88_tot7ib64",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "warehouse01"
+      }
+    },
+    {
+      "id": "mqnj6ld3_786jp4ql",
+      "timestamp": "2026-06-21T08:34:53.222Z",
+      "userId": "mqnj6l88_tot7ib64",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "warehouse01"
+      }
+    },
+    {
+      "id": "mqnj6ldd_txb3r4n6",
+      "timestamp": "2026-06-21T08:34:53.233Z",
+      "userId": "mqnj6l88_dss2png1",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "admin"
+      }
+    },
+    {
+      "id": "mqnj6le5_t5ij55py",
+      "timestamp": "2026-06-21T08:34:53.261Z",
+      "userId": "mqnj6l88_dss2png1",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "admin"
+      }
+    },
+    {
+      "id": "mqnj6lej_nw3u5kfd",
+      "timestamp": "2026-06-21T08:34:53.274Z",
+      "userId": "mqnj6l88_tot7ib64",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "warehouse01"
+      }
+    },
+    {
+      "id": "mqnj6leo_rarmo30q",
+      "timestamp": "2026-06-21T08:34:53.279Z",
+      "userId": "mqnj6l88_dss2png1",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "admin"
+      }
+    },
+    {
+      "id": "mqnj6lfc_935nqj6q",
+      "timestamp": "2026-06-21T08:34:53.304Z",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "auditor01"
+      }
+    },
+    {
+      "id": "mqnj6lg7_paw3lil9",
+      "timestamp": "2026-06-21T08:34:53.335Z",
+      "userId": "mqnj6l88_tot7ib64",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "warehouse01"
+      }
+    },
+    {
+      "id": "mqnj6lgm_pl7kxuhx",
+      "timestamp": "2026-06-21T08:34:53.349Z",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "auditor01"
+      }
+    },
+    {
+      "id": "mqnj6lha_7k5l4y75",
+      "timestamp": "2026-06-21T08:34:53.373Z",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "auditor01"
+      }
+    },
+    {
+      "id": "mqnj6li3_mec7f73o",
+      "timestamp": "2026-06-21T08:34:53.402Z",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "auditor01"
+      }
+    },
+    {
+      "id": "mqnj6ljc_xue7mvl4",
+      "timestamp": "2026-06-21T08:34:53.447Z",
+      "userId": "mqnj6l88_dss2png1",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "admin"
+      }
+    },
+    {
+      "id": "mqnjf8om_5uqmr67a",
+      "timestamp": "2026-06-21T08:41:36.693Z",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "auditor01"
+      }
+    },
+    {
+      "id": "mqnjf8or_f5i1y2ai",
+      "timestamp": "2026-06-21T08:41:36.698Z",
+      "userId": "mqnj6l88_dss2png1",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "admin"
+      }
+    },
+    {
+      "id": "mqnjf8ou_8bdppc48",
+      "timestamp": "2026-06-21T08:41:36.702Z",
+      "userId": "mqnj6l88_tot7ib64",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "warehouse01"
+      }
+    },
+    {
+      "id": "mqnjgv7h_zoasozxr",
+      "timestamp": "2026-06-21T08:42:52.540Z",
+      "userId": "mqnj6l88_tot7ib64",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "warehouse01"
+      }
+    }
+  ],
+  "flowTraceAuditRecords": [
+    {
+      "id": "mqnj6ld4_dni66cun",
+      "operationId": "mqnj6ld4_yg5qt19z",
+      "userId": "mqnj6l88_tot7ib64",
+      "username": "warehouse01",
+      "userRole": "warehouse",
+      "action": "login",
+      "timestamp": "2026-06-21T08:34:53.224Z",
+      "status": "success",
+      "permissionDecision": "redact",
+      "clientInfo": "service:mqnj6ld0_kh7p729a",
+      "serviceInstanceId": "mqnj6ld0_kh7p729a",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:34:53.220Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnj6ld9_1uzghti7",
+      "operationId": "mqnj6ld9_8jt51jqj",
+      "userId": "mqnj6l88_tot7ib64",
+      "username": "warehouse01",
+      "userRole": "warehouse",
+      "action": "viewList",
+      "timestamp": "2026-06-21T08:34:53.229Z",
+      "status": "redacted",
+      "permissionDecision": "redact",
+      "dataSize": 2,
+      "clientInfo": "service:mqnj6ld0_kh7p729a",
+      "serviceInstanceId": "mqnj6ld0_kh7p729a",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:34:53.220Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnj6ldf_8lvwnwou",
+      "operationId": "mqnj6ldf_ke9hj0a6",
+      "userId": "mqnj6l88_dss2png1",
+      "username": "admin",
+      "userRole": "admin",
+      "action": "login",
+      "timestamp": "2026-06-21T08:34:53.235Z",
+      "status": "success",
+      "permissionDecision": "allow",
+      "clientInfo": "service:mqnj6ld0_kh7p729a",
+      "serviceInstanceId": "mqnj6ld0_kh7p729a",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:34:53.220Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnj6le7_9ar0si6h",
+      "operationId": "mqnj6le7_xpccsnxr",
+      "userId": "mqnj6l88_dss2png1",
+      "username": "admin",
+      "userRole": "admin",
+      "action": "login",
+      "timestamp": "2026-06-21T08:34:53.263Z",
+      "status": "success",
+      "permissionDecision": "allow",
+      "clientInfo": "service:mqnj6le2_57xjbl8t",
+      "serviceInstanceId": "mqnj6le2_57xjbl8t",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:34:53.258Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnj6lek_gc8km403",
+      "operationId": "mqnj6lek_0ntchxiz",
+      "userId": "mqnj6l88_tot7ib64",
+      "username": "warehouse01",
+      "userRole": "warehouse",
+      "action": "login",
+      "timestamp": "2026-06-21T08:34:53.276Z",
+      "status": "success",
+      "permissionDecision": "redact",
+      "clientInfo": "service:mqnj6leg_t6o6h5w2",
+      "serviceInstanceId": "mqnj6leg_t6o6h5w2",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:34:53.272Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnj6lep_23e1png5",
+      "operationId": "mqnj6lep_d1srmv3g",
+      "userId": "mqnj6l88_dss2png1",
+      "username": "admin",
+      "userRole": "admin",
+      "action": "login",
+      "timestamp": "2026-06-21T08:34:53.281Z",
+      "status": "success",
+      "permissionDecision": "allow",
+      "clientInfo": "service:mqnj6leg_t6o6h5w2",
+      "serviceInstanceId": "mqnj6leg_t6o6h5w2",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:34:53.272Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnj6li4_5wui3fjw",
+      "operationId": "mqnj6li4_fnn8rkr6",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "username": "auditor01",
+      "userRole": "auditor",
+      "action": "login",
+      "timestamp": "2026-06-21T08:34:53.404Z",
+      "status": "success",
+      "permissionDecision": "allow",
+      "clientInfo": "service:mqnj6lhz_lqhuiqp9",
+      "serviceInstanceId": "mqnj6lhz_lqhuiqp9",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:34:53.399Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnj6lil_or7y1032",
+      "operationId": "mqnj6lil_qt9fqg07",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "username": "auditor01",
+      "userRole": "auditor",
+      "action": "viewDetail",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "sampleNo": "TEST-S-AUD01",
+      "timestamp": "2026-06-21T08:34:53.421Z",
+      "status": "success",
+      "permissionDecision": "allow",
+      "clientInfo": "service:mqnj6lhz_lqhuiqp9",
+      "serviceInstanceId": "mqnj6lhz_lqhuiqp9",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:34:53.399Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnj6liq_wl5uis8e",
+      "operationId": "mqnj6liq_o1yr1wch",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "username": "auditor01",
+      "userRole": "auditor",
+      "action": "export",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "sampleNo": "TEST-S-AUD01",
+      "timestamp": "2026-06-21T08:34:53.426Z",
+      "status": "success",
+      "permissionDecision": "allow",
+      "exportOptions": {
+        "format": "json"
+      },
+      "dataSize": 6030,
+      "clientInfo": "service:mqnj6lhz_lqhuiqp9",
+      "serviceInstanceId": "mqnj6lhz_lqhuiqp9",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:34:53.399Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnjf8oo_gp0p7p9u",
+      "operationId": "mqnjf8oo_6rm99c10",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "username": "auditor01",
+      "userRole": "auditor",
+      "action": "login",
+      "timestamp": "2026-06-21T08:41:36.696Z",
+      "status": "success",
+      "permissionDecision": "allow",
+      "clientInfo": "service:mqnjcwzr_838pii5h",
+      "serviceInstanceId": "mqnjcwzr_838pii5h",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:39:48.231Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnjf8os_ljooq8o1",
+      "operationId": "mqnjf8os_m5x92u9a",
+      "userId": "mqnj6l88_dss2png1",
+      "username": "admin",
+      "userRole": "admin",
+      "action": "login",
+      "timestamp": "2026-06-21T08:41:36.700Z",
+      "status": "success",
+      "permissionDecision": "allow",
+      "clientInfo": "service:mqnjcwzr_838pii5h",
+      "serviceInstanceId": "mqnjcwzr_838pii5h",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:39:48.231Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnjf8ov_b8oufm9x",
+      "operationId": "mqnjf8ov_3wj1ad6h",
+      "userId": "mqnj6l88_tot7ib64",
+      "username": "warehouse01",
+      "userRole": "warehouse",
+      "action": "login",
+      "timestamp": "2026-06-21T08:41:36.703Z",
+      "status": "success",
+      "permissionDecision": "redact",
+      "clientInfo": "service:mqnjcwzr_838pii5h",
+      "serviceInstanceId": "mqnjcwzr_838pii5h",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:39:48.231Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnjf8pe_rlpc9qxw",
+      "operationId": "mqnjf8pe_qmhq3egq",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "username": "auditor01",
+      "userRole": "auditor",
+      "action": "viewList",
+      "timestamp": "2026-06-21T08:41:36.722Z",
+      "status": "success",
+      "permissionDecision": "allow",
+      "dataSize": 6,
+      "clientInfo": "service:mqnjcwzr_838pii5h",
+      "serviceInstanceId": "mqnjcwzr_838pii5h",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:39:48.231Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnjf8ph_2xnx2tau",
+      "operationId": "mqnjf8ph_8nz5cqnd",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "username": "auditor01",
+      "userRole": "auditor",
+      "action": "viewList",
+      "timestamp": "2026-06-21T08:41:36.725Z",
+      "status": "success",
+      "permissionDecision": "allow",
+      "dataSize": 6,
+      "clientInfo": "service:mqnjcwzr_838pii5h",
+      "serviceInstanceId": "mqnjcwzr_838pii5h",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:39:48.231Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnjf8pn_10ye16nk",
+      "operationId": "mqnjf8pn_evkrribb",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "username": "auditor01",
+      "userRole": "auditor",
+      "action": "viewDetail",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "sampleNo": "TEST-S-AUD01",
+      "timestamp": "2026-06-21T08:41:36.731Z",
+      "status": "success",
+      "permissionDecision": "allow",
+      "clientInfo": "service:mqnjcwzr_838pii5h",
+      "serviceInstanceId": "mqnjcwzr_838pii5h",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:39:48.231Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnjf8pr_f2numksh",
+      "operationId": "mqnjf8pr_3rf6uk9a",
+      "userId": "mqnj6l88_tot7ib64",
+      "username": "warehouse01",
+      "userRole": "warehouse",
+      "action": "viewDetail",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "sampleNo": "TEST-S-AUD01",
+      "timestamp": "2026-06-21T08:41:36.735Z",
+      "status": "redacted",
+      "permissionDecision": "redact",
+      "clientInfo": "service:mqnjcwzr_838pii5h",
+      "serviceInstanceId": "mqnjcwzr_838pii5h",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:39:48.231Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnjf8px_eb9gs7ow",
+      "operationId": "mqnjf8px_92ts3phb",
+      "userId": "mqnj6l88_tot7ib64",
+      "username": "warehouse01",
+      "userRole": "warehouse",
+      "action": "export",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "sampleNo": "TEST-S-AUD01",
+      "timestamp": "2026-06-21T08:41:36.741Z",
+      "status": "redacted",
+      "permissionDecision": "redact",
+      "exportOptions": {
+        "format": "json"
+      },
+      "dataSize": 777,
+      "clientInfo": "service:mqnjcwzr_838pii5h",
+      "serviceInstanceId": "mqnjcwzr_838pii5h",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:39:48.231Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnjf8q7_p8enpqzx",
+      "operationId": "mqnjf8q7_l2jeeh87",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "username": "auditor01",
+      "userRole": "auditor",
+      "action": "export",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "sampleNo": "TEST-S-AUD01",
+      "timestamp": "2026-06-21T08:41:36.751Z",
+      "status": "success",
+      "permissionDecision": "allow",
+      "exportOptions": {
+        "format": "csv"
+      },
+      "dataSize": 2509,
+      "clientInfo": "service:mqnjcwzr_838pii5h",
+      "serviceInstanceId": "mqnjcwzr_838pii5h",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:39:48.231Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnjf8qm_1mc8hpa4",
+      "operationId": "mqnjf8qm_tip5fqd8",
+      "userId": "mqnj6l88_tot7ib64",
+      "username": "warehouse01",
+      "userRole": "warehouse",
+      "action": "viewList",
+      "timestamp": "2026-06-21T08:41:36.766Z",
+      "status": "denied",
+      "permissionDecision": "deny",
+      "denyReason": "review revoke check",
+      "errorCode": "INSUFFICIENT_PERMISSION",
+      "clientInfo": "service:mqnjcwzr_838pii5h",
+      "serviceInstanceId": "mqnjcwzr_838pii5h",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:39:48.231Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnjf8qp_86el35gw",
+      "operationId": "mqnjf8qp_wbol3khw",
+      "userId": "mqnj6l88_tot7ib64",
+      "username": "warehouse01",
+      "userRole": "warehouse",
+      "action": "viewDetail",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "timestamp": "2026-06-21T08:41:36.769Z",
+      "status": "denied",
+      "permissionDecision": "deny",
+      "denyReason": "review revoke check",
+      "errorCode": "INSUFFICIENT_PERMISSION",
+      "clientInfo": "service:mqnjcwzr_838pii5h",
+      "serviceInstanceId": "mqnjcwzr_838pii5h",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:39:48.231Z",
+        "auditConfigEnabled": true
+      }
+    },
+    {
+      "id": "mqnjf8qr_vwpwlyjy",
+      "operationId": "mqnjf8qr_jiun3pt5",
+      "userId": "mqnj6l88_tot7ib64",
+      "username": "warehouse01",
+      "userRole": "warehouse",
+      "action": "export",
+      "sampleId": "mqnj6lib_dlfxif23",
+      "timestamp": "2026-06-21T08:41:36.771Z",
+      "status": "denied",
+      "permissionDecision": "deny",
+      "denyReason": "review revoke check",
+      "errorCode": "INSUFFICIENT_PERMISSION",
+      "clientInfo": "service:mqnjcwzr_838pii5h",
+      "serviceInstanceId": "mqnjcwzr_838pii5h",
+      "metadata": {
+        "serviceStartedAt": "2026-06-21T08:39:48.231Z",
+        "auditConfigEnabled": true
+      }
+    }
+  ],
+  "flowTracePermissionState": [
+    {
+      "id": "mqnj6l88_3q4uqmyf",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "lastCheckAt": "2026-06-21T08:41:36.778Z",
+      "grantedActions": [
+        "viewDetail",
+        "viewList",
+        "export"
+      ]
+    },
+    {
+      "id": "mqnj6l88_tot7ib64",
+      "userId": "mqnj6l88_tot7ib64",
+      "lastCheckAt": "2026-06-21T08:41:36.738Z",
+      "grantedActions": [
+        "viewDetail",
+        "viewList",
+        "export"
+      ],
+      "revokedAt": "2026-06-21T08:41:36.754Z",
+      "revokeReason": "review revoke check"
+    },
+    {
+      "id": "mqnj6l88_dss2png1",
+      "userId": "mqnj6l88_dss2png1",
+      "lastCheckAt": "2026-06-21T08:34:53.453Z",
+      "grantedActions": [
+        "viewDetail"
+      ]
+    }
+  ],
+  "sessions": [
+    {
+      "id": "mqnj6l9h_asaf576h",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "createdAt": "2026-06-21T08:34:53.093Z",
+      "lastAccessAt": "2026-06-21T08:34:53.093Z"
+    },
+    {
+      "id": "mqnj6lb4_pj4nbh84",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "createdAt": "2026-06-21T08:34:53.152Z",
+      "lastAccessAt": "2026-06-21T08:34:53.158Z"
+    },
+    {
+      "id": "mqnj6lbw_yaafeyb7",
+      "userId": "mqnj6l88_tot7ib64",
+      "createdAt": "2026-06-21T08:34:53.180Z",
+      "lastAccessAt": "2026-06-21T08:34:53.185Z"
+    },
+    {
+      "id": "mqnj6lc9_cv2md4as",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "createdAt": "2026-06-21T08:34:53.193Z",
+      "lastAccessAt": "2026-06-21T08:34:53.199Z"
+    },
+    {
+      "id": "mqnj6lcl_yv49dm0h",
+      "userId": "mqnj6l88_tot7ib64",
+      "createdAt": "2026-06-21T08:34:53.205Z",
+      "lastAccessAt": "2026-06-21T08:34:53.209Z"
+    },
+    {
+      "id": "mqnj6ld2_vnmqosxv",
+      "userId": "mqnj6l88_tot7ib64",
+      "createdAt": "2026-06-21T08:34:53.222Z",
+      "lastAccessAt": "2026-06-21T08:34:53.256Z"
+    },
+    {
+      "id": "mqnj6ldd_fj3hipbl",
+      "userId": "mqnj6l88_dss2png1",
+      "createdAt": "2026-06-21T08:34:53.233Z",
+      "lastAccessAt": "2026-06-21T08:34:53.238Z"
+    },
+    {
+      "id": "mqnj6le5_7vc0brw1",
+      "userId": "mqnj6l88_dss2png1",
+      "createdAt": "2026-06-21T08:34:53.261Z",
+      "lastAccessAt": "2026-06-21T08:34:53.266Z"
+    },
+    {
+      "id": "mqnj6lei_rbuharmj",
+      "userId": "mqnj6l88_tot7ib64",
+      "createdAt": "2026-06-21T08:34:53.274Z",
+      "lastAccessAt": "2026-06-21T08:34:53.274Z"
+    },
+    {
+      "id": "mqnj6len_1oahcb4a",
+      "userId": "mqnj6l88_dss2png1",
+      "createdAt": "2026-06-21T08:34:53.279Z",
+      "lastAccessAt": "2026-06-21T08:34:53.290Z"
+    },
+    {
+      "id": "mqnj6lfc_uij0o15f",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "createdAt": "2026-06-21T08:34:53.304Z",
+      "lastAccessAt": "2026-06-21T08:34:53.328Z"
+    },
+    {
+      "id": "mqnj6lg7_ziolze6u",
+      "userId": "mqnj6l88_tot7ib64",
+      "createdAt": "2026-06-21T08:34:53.335Z",
+      "lastAccessAt": "2026-06-21T08:34:53.344Z"
+    },
+    {
+      "id": "mqnj6lgl_wmc7kxdf",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "createdAt": "2026-06-21T08:34:53.349Z",
+      "lastAccessAt": "2026-06-21T08:34:53.354Z"
+    },
+    {
+      "id": "mqnj6lh9_yb1e94ka",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "createdAt": "2026-06-21T08:34:53.373Z",
+      "lastAccessAt": "2026-06-21T08:34:53.395Z"
+    },
+    {
+      "id": "mqnj6li2_nph8q543",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "createdAt": "2026-06-21T08:34:53.402Z",
+      "lastAccessAt": "2026-06-21T08:34:53.435Z"
+    },
+    {
+      "id": "mqnj6ljb_8fsrtnfn",
+      "userId": "mqnj6l88_dss2png1",
+      "createdAt": "2026-06-21T08:34:53.447Z",
+      "lastAccessAt": "2026-06-21T08:34:53.452Z"
+    },
+    {
+      "id": "mqnjf8ol_vb2x3bqz",
+      "userId": "mqnj6l88_3q4uqmyf",
+      "createdAt": "2026-06-21T08:41:36.693Z",
+      "lastAccessAt": "2026-06-21T08:41:36.777Z"
+    },
+    {
+      "id": "mqnjf8oq_bhf4gnx9",
+      "userId": "mqnj6l88_dss2png1",
+      "createdAt": "2026-06-21T08:41:36.698Z",
+      "lastAccessAt": "2026-06-21T08:41:36.752Z"
+    },
+    {
+      "id": "mqnjf8ot_hmq0yf8n",
+      "userId": "mqnj6l88_tot7ib64",
+      "createdAt": "2026-06-21T08:41:36.702Z",
+      "lastAccessAt": "2026-06-21T08:41:36.770Z"
+    },
+    {
+      "id": "mqnjgv7g_rbugbw9v",
+      "userId": "mqnj6l88_tot7ib64",
+      "createdAt": "2026-06-21T08:42:52.540Z",
+      "lastAccessAt": "2026-06-21T08:42:52.552Z"
+    }
+  ],
+  "_meta": {
+    "version": 1,
+    "updatedAt": "2026-06-21T08:42:52.552Z"
+  }
+}
