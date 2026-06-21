@@ -14,6 +14,7 @@ import {
   LogOut,
   User,
   FileText,
+  GitBranch,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
   { to: '/audit/timeline', label: '审计时间线', icon: <Clock className="w-5 h-5" />, roles: ['auditor', 'admin'] },
   { to: '/audit/export', label: '审计导出', icon: <Download className="w-5 h-5" />, roles: ['auditor', 'admin'] },
   { to: '/audit/archive-review', label: '归档后复盘', icon: <FileText className="w-5 h-5" />, roles: ['auditor', 'admin'] },
+  { to: '/audit/flow-trace', label: '流转追溯台', icon: <GitBranch className="w-5 h-5" />, roles: ['auditor', 'admin'] },
 ];
 
 interface AppLayoutProps {

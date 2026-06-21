@@ -87,6 +87,63 @@ export const ERROR_CODES = {
   AUTH_REQUIRED: 'AUTH_REQUIRED',
 } as const;
 
+export const ERROR_CATEGORIES: Record<string, 'permission' | 'status' | 'location' | 'duplicate' | 'other'> = {
+  DUPLICATE_SAMPLE_NO: 'duplicate',
+  INVALID_STATUS_TRANSITION: 'status',
+  WRONG_SOURCE_LOCATION: 'location',
+  INSUFFICIENT_PERMISSION: 'permission',
+  SAMPLE_ALREADY_ARCHIVED: 'status',
+  SAMPLE_NOT_REVIEWED: 'status',
+  TRANSFER_NOT_FOUND: 'other',
+  TRANSFER_ALREADY_ROLLED_BACK: 'status',
+  INVALID_TARGET_LOCATION: 'location',
+  LOCATION_FULL: 'location',
+  INVALID_HOLDER: 'status',
+  MISSING_REQUIRED_FIELD: 'other',
+  INVALID_DATE_FORMAT: 'other',
+  INVALID_CREDENTIALS: 'permission',
+  AUTH_REQUIRED: 'permission',
+};
+
+export const ERROR_CATEGORY_LABELS: Record<string, string> = {
+  permission: '权限不足',
+  status: '状态冲突',
+  location: '库位问题',
+  duplicate: '编号重复',
+  other: '其他原因',
+};
+
+export const FLOW_TRACE_STAGE_LABELS: Record<string, string> = {
+  import: '批次导入',
+  inbound: '入库登记',
+  outbound: '出库交接',
+  test_receive: '检测接收',
+  test_complete: '检测完成',
+  review: '复核通过',
+  archive: '归档完成',
+  rollback: '异常回退',
+};
+
+export const FLOW_TRACE_STAGE_ORDER: string[] = [
+  'import',
+  'inbound',
+  'outbound',
+  'test_receive',
+  'test_complete',
+  'review',
+  'archive',
+];
+
+export const STATUS_TO_STAGE: Record<string, string> = {
+  imported: 'import',
+  in_stock: 'inbound',
+  in_transit: 'outbound',
+  testing: 'test_receive',
+  tested: 'test_complete',
+  archived: 'archive',
+  rolled_back: 'rollback',
+};
+
 export const DEFAULT_PASSWORD = '123456';
 
 export const hashPassword = (password: string): string => {

@@ -234,3 +234,150 @@ export interface ArchiveReviewExportOptions {
   includeFailedRecords?: boolean;
   includeRollbackRecords?: boolean;
 }
+
+export type FlowTraceStageKey =
+  | 'import'
+  | 'inbound'
+  | 'outbound'
+  | 'test_receive'
+  | 'test_complete'
+  | 'review'
+  | 'archive'
+  | 'rollback';
+
+export interface FlowTraceStage {
+  key: FlowTraceStageKey;
+  label: string;
+  status: 'completed' | 'current' | 'pending' | 'failed' | 'rolled_back';
+  timestamp?: string;
+  operatorName?: string;
+  operatorRole?: string;
+  location?: string;
+  remark?: string;
+  testResult?: string;
+  isRolledBack?: boolean;
+  rollbackReason?: string;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
+export interface FlowTraceSampleSummary {
+  id: string;
+  sampleNo: string;
+  type: string;
+  batchNo: string;
+  currentStatus: SampleStatus;
+  currentStage: FlowTraceStageKey;
+  isArchived: boolean;
+  isLocked: boolean;
+  lockReason?: string;
+  lastTransferAt?: string;
+  failedAttempts: number;
+  rollbackCount: number;
+  hasBlockedOps: boolean;
+}
+
+export interface FlowTraceDetailData {
+  sample: {
+    id: string;
+    sampleNo: string;
+    type: string;
+    batchId: string;
+    batchNo: string;
+    currentStatus: SampleStatus;
+    currentLocation?: string;
+    currentHolder?: string;
+    isArchived: boolean;
+    archivedAt?: string;
+    archivedBy?: string;
+    reviewedBy?: string;
+    reviewedAt?: string;
+    isLocked: boolean;
+    lockReason?: string;
+    collectedAt: string;
+    collectedBy: string;
+    description?: string;
+  };
+  businessChain: FlowTraceStage[];
+  latestValidTransfer: {
+    type: TransferType;
+    timestamp: string;
+    operatorName: string;
+    fromStatus?: SampleStatus;
+    toStatus: SampleStatus;
+    fromLocation?: string;
+    toLocation?: string;
+    remark?: string;
+  } | null;
+  blockedOperations: Array<{
+    id: string;
+    attemptedType: TransferType;
+    attemptedAt: string;
+    attemptedByName: string;
+    errorCode: string;
+    errorMessage: string;
+    errorCategory: 'permission' | 'status' | 'location' | 'duplicate' | 'other';
+    resolved: boolean;
+  }>;
+  rollbackHistory: Array<{
+    id: string;
+    rollbackAt: string;
+    rollbackByName: string;
+    reason: string;
+    rolledBackStage: FlowTraceStageKey;
+    rolledBackTransferType: TransferType;
+    fromStatus: SampleStatus;
+    toStatus: SampleStatus;
+    landingStage: FlowTraceStageKey;
+  }>;
+  fullTimeline: Array<{
+    id: string;
+    type: 'transfer' | 'rollback' | 'failed' | 'review';
+    timestamp: string;
+    stageKey: FlowTraceStageKey;
+    actionLabel: string;
+    operatorName: string;
+    operatorRole: string;
+    status?: string;
+    location?: string;
+    holder?: string;
+    testResult?: string;
+    remark?: string;
+    isRolledBack?: boolean;
+    rollbackReason?: string;
+    rollbackBy?: string;
+    errorCode?: string;
+    errorMessage?: string;
+    errorCategory?: string;
+  }>;
+  summary: {
+    totalTransfers: number;
+    validTransfers: number;
+    failedAttempts: number;
+    rollbackCount: number;
+    archiveAttempts: number;
+    lastValidTransferAt?: string;
+    lastRollbackAt?: string;
+    lastFailedAt?: string;
+    currentStageLabel: string;
+    daysInCurrentStage: number;
+  };
+}
+
+export interface FlowTraceExportOptions {
+  format: 'json' | 'csv';
+  includeBusinessChain?: boolean;
+  includeFullTimeline?: boolean;
+  includeBlockedOps?: boolean;
+  includeRollbackHistory?: boolean;
+  includeSummary?: boolean;
+}
+
+export interface FlowTraceFilter {
+  keyword?: string;
+  status?: SampleStatus;
+  hasFailed?: boolean;
+  hasRollback?: boolean;
+  isLocked?: boolean;
+  isArchived?: boolean;
+}

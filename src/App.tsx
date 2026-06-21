@@ -20,6 +20,7 @@ import { FailureList } from './pages/exception/FailureList';
 import { AuditTimeline } from './pages/audit/AuditTimeline';
 import { AuditExport } from './pages/audit/AuditExport';
 import { ArchiveReview } from './pages/audit/ArchiveReview';
+import { FlowTraceDesk } from './pages/audit/FlowTraceDesk';
 import type { UserRole } from '@shared/types';
 import { ROLE_LABELS } from '@shared/constants';
 import { Loader2 } from 'lucide-react';
@@ -37,6 +38,7 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/audit/timeline': ['auditor', 'admin'],
   '/audit/export': ['auditor', 'admin'],
   '/audit/archive-review': ['auditor', 'admin'],
+  '/audit/flow-trace': ['auditor', 'admin'],
 };
 
 interface ProtectedRouteProps {
@@ -238,6 +240,14 @@ function AppContent() {
           element={
             <ProtectedRoute allowedRoles={['auditor', 'admin']}>
               <ArchiveReview />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/audit/flow-trace"
+          element={
+            <ProtectedRoute allowedRoles={['auditor', 'admin']}>
+              <FlowTraceDesk />
             </ProtectedRoute>
           }
         />
