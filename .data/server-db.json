@@ -781,6 +781,26 @@
       "details": {
         "username": "warehouse01"
       }
+    },
+    {
+      "id": "mqnk3vug_joq96gb6",
+      "timestamp": "2026-06-21T09:00:46.455Z",
+      "userId": "mqnj6l88_dss2png1",
+      "action": "login",
+      "targetType": "user",
+      "details": {
+        "username": "admin"
+      }
+    },
+    {
+      "id": "mqnk3vy8_3042w94a",
+      "timestamp": "2026-06-21T09:00:46.592Z",
+      "userId": "mqnj6l88_dss2png1",
+      "action": "logout",
+      "targetType": "user",
+      "details": {
+        "username": "admin"
+      }
     }
   ],
   "flowTraceAuditRecords": [
@@ -1333,6 +1353,6 @@
   ],
   "_meta": {
     "version": 1,
-    "updatedAt": "2026-06-21T08:42:52.552Z"
+    "updatedAt": "2026-06-21T09:00:46.592Z"
   }
 }
