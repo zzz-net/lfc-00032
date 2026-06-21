@@ -278,6 +278,14 @@ export const validateRollback = (params: RollbackValidationParams): TransferVali
     };
   }
 
+  if (targetTransfer.type === 'rollback') {
+    return {
+      valid: false,
+      errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
+      errorMessage: '回退记录本身不允许再次回退',
+    };
+  }
+
   if (operator.role !== 'auditor' && operator.role !== 'admin') {
     return {
       valid: false,
@@ -296,5 +304,5 @@ export const VALID_TRANSITIONS: Record<TransferType, { from: SampleStatus; to: S
   test_receive: { from: 'in_transit', to: 'testing' },
   test_complete: { from: 'testing', to: 'tested' },
   archive: { from: 'tested', to: 'archived' },
-  rollback: { from: 'archived', to: 'rolled_back' },
+  rollback: { from: 'archived', to: 'tested' },
 };

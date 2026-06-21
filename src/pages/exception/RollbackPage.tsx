@@ -16,6 +16,7 @@ export const RollbackPage = () => {
   const getTransferRecordsBySample = useAppStore((s) => s.getTransferRecordsBySample);
   const performRollback = useAppStore((s) => s.performRollback);
   const storeError = useAppStore((s) => s.error);
+  const getAllSamples = useAppStore((s) => s.getAllSamples);
 
   const [selectedSample, setSelectedSample] = useState('');
   const [transfers, setTransfers] = useState<TransferRecord[]>([]);
@@ -26,7 +27,11 @@ export const RollbackPage = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  const nonArchivedSamples = samples.filter((s) => !s.isArchived);
+  const allSamples = samples;
+
+  useEffect(() => {
+    getAllSamples();
+  }, [getAllSamples]);
 
   useEffect(() => {
     if (selectedSample) {
@@ -79,6 +84,8 @@ export const RollbackPage = () => {
               <li>回退操作仅限审核员和管理员执行</li>
               <li>只能回退未被回退过的交接记录</li>
               <li>批次导入记录不可回退</li>
+              <li>回退记录本身不可再次回退</li>
+              <li>归档后的样本可通过回退恢复到归档前状态</li>
               <li>回退会被完整记录在审计链路中</li>
               <li>回退不存在的交接记录将被拒绝</li>
             </ul>
@@ -102,7 +109,7 @@ export const RollbackPage = () => {
             className="input-field"
           >
             <option value="">请选择需要回退操作的样本...</option>
-            {nonArchivedSamples.map((s) => (
+            {allSamples.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.sampleNo} - {s.type}
               </option>
@@ -140,6 +147,7 @@ export const RollbackPage = () => {
                   const canRollback =
                     !t.isRolledBack &&
                     t.type !== 'import' &&
+                    t.type !== 'rollback' &&
                     t.toStatus === sample?.currentStatus &&
                     (currentUser?.role === 'auditor' || currentUser?.role === 'admin');
                   return (
