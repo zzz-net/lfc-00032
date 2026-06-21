@@ -159,3 +159,78 @@ export interface ImportResult {
     errorMessage: string;
   }>;
 }
+
+export type ArchiveReviewRecordType = 'transfer' | 'failed' | 'rollback' | 'review';
+
+export interface ArchiveReviewTimelineItem {
+  id: string;
+  type: ArchiveReviewRecordType;
+  timestamp: string;
+  operatorName: string;
+  operatorRole: string;
+  action: string;
+  status?: string;
+  location?: string;
+  holder?: string;
+  testResult?: string;
+  remark?: string;
+  isRolledBack?: boolean;
+  rollbackReason?: string;
+  rollbackBy?: string;
+  rollbackAt?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface ArchiveReviewData {
+  sample: {
+    id: string;
+    sampleNo: string;
+    type: string;
+    currentStatus: SampleStatus;
+    isArchived: boolean;
+    archivedAt?: string;
+    archivedBy?: string;
+    reviewedBy?: string;
+    reviewedAt?: string;
+    isLocked: boolean;
+    lockReason?: string;
+  };
+  archiveTransfer: TransferRecord | null;
+  timeline: ArchiveReviewTimelineItem[];
+  failedTransfers: Array<{
+    id: string;
+    attemptedType: TransferType;
+    attemptedAt: string;
+    attemptedByName: string;
+    errorCode: string;
+    errorMessage: string;
+    resolved: boolean;
+  }>;
+  rollbackRecords: Array<{
+    id: string;
+    rollbackAt: string;
+    rollbackByName: string;
+    reason: string;
+    rolledBackTransferType: TransferType;
+    fromStatus: SampleStatus;
+    toStatus: SampleStatus;
+  }>;
+  summary: {
+    totalTransfers: number;
+    successfulTransfers: number;
+    failedAttempts: number;
+    rollbackCount: number;
+    archiveAttempts: number;
+    lastArchiveAt?: string;
+    lastRollbackAt?: string;
+  };
+}
+
+export interface ArchiveReviewExportOptions {
+  format: 'json' | 'csv';
+  includeFullTimeline?: boolean;
+  includeFailedRecords?: boolean;
+  includeRollbackRecords?: boolean;
+}

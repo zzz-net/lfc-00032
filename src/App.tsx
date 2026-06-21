@@ -19,6 +19,7 @@ import { RollbackPage } from './pages/exception/RollbackPage';
 import { FailureList } from './pages/exception/FailureList';
 import { AuditTimeline } from './pages/audit/AuditTimeline';
 import { AuditExport } from './pages/audit/AuditExport';
+import { ArchiveReview } from './pages/audit/ArchiveReview';
 import type { UserRole } from '@shared/types';
 import { ROLE_LABELS } from '@shared/constants';
 import { Loader2 } from 'lucide-react';
@@ -35,6 +36,7 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/exception/failures': ['auditor', 'admin'],
   '/audit/timeline': ['auditor', 'admin'],
   '/audit/export': ['auditor', 'admin'],
+  '/audit/archive-review': ['auditor', 'admin'],
 };
 
 interface ProtectedRouteProps {
@@ -228,6 +230,14 @@ function AppContent() {
           element={
             <ProtectedRoute allowedRoles={['auditor', 'admin']}>
               <AuditExport />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/audit/archive-review"
+          element={
+            <ProtectedRoute allowedRoles={['auditor', 'admin']}>
+              <ArchiveReview />
             </ProtectedRoute>
           }
         />

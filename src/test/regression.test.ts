@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useAppStore } from '../store/useAppStore';
 import { validateRollback } from '../services/transferValidator';
-import type { SampleImportRow, TransferRecord } from '@shared/types';
+import { hasPermission } from '../services/permissionService';
+import type { SampleImportRow, TransferRecord, User, ArchiveReviewData } from '@shared/types';
+import { resetDBInstance } from '../lib/db';
 
 const ADMIN_USER = { username: 'admin', password: '123456' };
 
@@ -16,7 +18,14 @@ const makeRow = (sampleNo: string, overrides?: Partial<SampleImportRow>): Sample
 const initAndLogin = async () => {
   const store = useAppStore.getState();
   await store.initializeDB();
-  await store.login(ADMIN_USER.username, ADMIN_USER.password);
+  const loginSuccess = await store.login(ADMIN_USER.username, ADMIN_USER.password);
+  expect(loginSuccess).toBe(true);
+  await new Promise(resolve => setTimeout(resolve, 10));
+  await store.getAllUsers();
+  await store.getAllLocations();
+  await store.getAllSamples();
+  await store.getAllBatches();
+  await store.getFailedTransfers();
 };
 
 describe('Batch import with mixed duplicate and new samples', () => {
@@ -263,29 +272,38 @@ describe('Rollback after archive', () => {
     await store.importBatch(rows, `BATCH-ARCH-${sampleNo}`);
 
     const sample = useAppStore.getState().samples.find((s) => s.sampleNo === sampleNo)!;
-    const locations = useAppStore.getState().locations;
-    const storageLoc = locations.find((l) => l.type === 'storage' && l.status === 'active')!;
+    let locations = useAppStore.getState().locations;
+    expect(locations.length).toBeGreaterThan(0);
+    const storageLoc = locations.find((l) => l.type === 'storage' && l.status === 'active');
+    expect(storageLoc).toBeDefined();
 
-    await useAppStore.getState().performInbound(sample.id, storageLoc.id);
+    await useAppStore.getState().performInbound(sample.id, storageLoc!.id);
 
     const testers = useAppStore.getState().users.filter((u) => u.role === 'tester');
     const tester = testers[0];
-    await useAppStore.getState().performOutbound(sample.id, storageLoc.id, tester.id);
+    expect(tester).toBeDefined();
+    await useAppStore.getState().performOutbound(sample.id, storageLoc!.id, tester.id);
 
-    const testingLoc = locations.find((l) => l.type === 'testing' && l.status === 'active')!;
-    await useAppStore.getState().performTestReceive(sample.id, testingLoc.id);
+    const testingLoc = locations.find((l) => l.type === 'testing' && l.status === 'active');
+    expect(testingLoc).toBeDefined();
+    await useAppStore.getState().performTestReceive(sample.id, testingLoc!.id);
 
     const testCompleteResult = await useAppStore.getState().performTestComplete(sample.id, '合格');
     expect(testCompleteResult).not.toBeNull();
 
     await useAppStore.getState().logout();
-    await useAppStore.getState().login('auditor01', '123456');
+    const loginAuditor = await useAppStore.getState().login('auditor01', '123456');
+    expect(loginAuditor).toBe(true);
+    expect(useAppStore.getState().currentUser?.role).toBe('auditor');
+    await useAppStore.getState().getAllLocations();
+    locations = useAppStore.getState().locations;
 
     const reviewResult = await useAppStore.getState().performReview(sample.id, '复核通过');
     expect(reviewResult).toBe(true);
 
-    const archiveLoc = locations.find((l) => l.type === 'archive' && l.status === 'active')!;
-    const archiveResult = await useAppStore.getState().performArchive(sample.id, archiveLoc.id);
+    const archiveLoc = locations.find((l) => l.type === 'archive' && l.status === 'active');
+    expect(archiveLoc).toBeDefined();
+    const archiveResult = await useAppStore.getState().performArchive(sample.id, archiveLoc!.id);
     expect(archiveResult).not.toBeNull();
 
     const archivedSample = useAppStore.getState().samples.find((s) => s.id === sample.id)!;
@@ -395,29 +413,38 @@ describe('Archive-rollback chain integrity', () => {
     await store.importBatch(rows, `BATCH-ARCH2-${sampleNo}`);
 
     const sample = useAppStore.getState().samples.find((s) => s.sampleNo === sampleNo)!;
-    const locations = useAppStore.getState().locations;
-    const storageLoc = locations.find((l) => l.type === 'storage' && l.status === 'active')!;
+    let locations = useAppStore.getState().locations;
+    expect(locations.length).toBeGreaterThan(0);
+    const storageLoc = locations.find((l) => l.type === 'storage' && l.status === 'active');
+    expect(storageLoc).toBeDefined();
 
-    await useAppStore.getState().performInbound(sample.id, storageLoc.id);
+    await useAppStore.getState().performInbound(sample.id, storageLoc!.id);
 
     const testers = useAppStore.getState().users.filter((u) => u.role === 'tester');
     const tester = testers[0];
-    await useAppStore.getState().performOutbound(sample.id, storageLoc.id, tester.id);
+    expect(tester).toBeDefined();
+    await useAppStore.getState().performOutbound(sample.id, storageLoc!.id, tester.id);
 
-    const testingLoc = locations.find((l) => l.type === 'testing' && l.status === 'active')!;
-    await useAppStore.getState().performTestReceive(sample.id, testingLoc.id);
+    const testingLoc = locations.find((l) => l.type === 'testing' && l.status === 'active');
+    expect(testingLoc).toBeDefined();
+    await useAppStore.getState().performTestReceive(sample.id, testingLoc!.id);
 
     const testCompleteResult = await useAppStore.getState().performTestComplete(sample.id, '合格');
     expect(testCompleteResult).not.toBeNull();
 
     await useAppStore.getState().logout();
-    await useAppStore.getState().login('auditor01', '123456');
+    const loginAuditor = await useAppStore.getState().login('auditor01', '123456');
+    expect(loginAuditor).toBe(true);
+    expect(useAppStore.getState().currentUser?.role).toBe('auditor');
+    await useAppStore.getState().getAllLocations();
+    locations = useAppStore.getState().locations;
 
     const reviewResult = await useAppStore.getState().performReview(sample.id, '复核通过');
     expect(reviewResult).toBe(true);
 
-    const archiveLoc = locations.find((l) => l.type === 'archive' && l.status === 'active')!;
-    const archiveResult = await useAppStore.getState().performArchive(sample.id, archiveLoc.id);
+    const archiveLoc = locations.find((l) => l.type === 'archive' && l.status === 'active');
+    expect(archiveLoc).toBeDefined();
+    const archiveResult = await useAppStore.getState().performArchive(sample.id, archiveLoc!.id);
     expect(archiveResult).not.toBeNull();
 
     return { sampleId: sample.id, archiveTransferId: archiveResult!.id };
@@ -539,5 +566,664 @@ describe('Archive-rollback chain integrity', () => {
     sample = useAppStore.getState().samples.find((s) => s.id === sampleId)!;
     expect(sample.currentStatus).toBe('archived');
     expect(sample.isArchived).toBe(true);
+  });
+});
+
+describe('Archive Review - Post-archiving Analysis Capability', () => {
+  beforeEach(async () => {
+    resetDBInstance();
+    useAppStore.setState({
+      currentUser: null,
+      users: [],
+      samples: [],
+      locations: [],
+      batches: [],
+      transferRecords: [],
+      failedTransfers: [],
+      auditLogs: [],
+      isInitialized: false,
+    });
+  });
+
+  const fullFlowToArchive = async (sampleNo: string, testResult = '合格') => {
+    const store = useAppStore.getState();
+    const rows = [makeRow(sampleNo)];
+    await store.importBatch(rows, `BATCH-REV-${sampleNo}`);
+
+    const sample = useAppStore.getState().samples.find((s) => s.sampleNo === sampleNo)!;
+    await store.getAllLocations();
+    let locations = useAppStore.getState().locations;
+    expect(locations.length).toBeGreaterThan(0);
+    const storageLoc = locations.find((l) => l.type === 'storage' && l.status === 'active');
+    expect(storageLoc).toBeDefined();
+
+    await store.performInbound(sample.id, storageLoc!.id);
+
+    await store.getAllUsers();
+    const testers = useAppStore.getState().users.filter((u) => u.role === 'tester');
+    const tester = testers[0];
+    expect(tester).toBeDefined();
+    await store.performOutbound(sample.id, storageLoc!.id, tester.id);
+
+    const testingLoc = locations.find((l) => l.type === 'testing' && l.status === 'active');
+    expect(testingLoc).toBeDefined();
+    await store.performTestReceive(sample.id, testingLoc!.id);
+
+    const testCompleteResult = await store.performTestComplete(sample.id, testResult);
+    expect(testCompleteResult).not.toBeNull();
+
+    store.logout();
+    await new Promise(resolve => setTimeout(resolve, 10));
+    const loginAuditor = await store.login('auditor01', '123456');
+    expect(loginAuditor).toBe(true);
+    await new Promise(resolve => setTimeout(resolve, 10));
+    await store.getAllLocations();
+    locations = store.locations;
+
+    const reviewResult = await store.performReview(sample.id, '复核通过');
+    expect(reviewResult).toBe(true);
+
+    const archiveLoc = locations.find((l) => l.type === 'archive' && l.status === 'active');
+    expect(archiveLoc).toBeDefined();
+    const archiveResult = await store.performArchive(sample.id, archiveLoc!.id);
+    expect(archiveResult).not.toBeNull();
+
+    return { sampleId: sample.id, archiveTransferId: archiveResult!.id };
+  };
+
+  const simulateRestart = async () => {
+    resetDBInstance();
+    useAppStore.setState({
+      currentUser: null,
+      samples: [],
+      batches: [],
+      transferRecords: [],
+      failedTransfers: [],
+      auditLogs: [],
+      isInitialized: false,
+    });
+    await useAppStore.getState().initializeDB();
+  };
+
+  describe('Data Consistency After Restart', () => {
+    it('should show consistent review data after archive and restart', async () => {
+      await initAndLogin();
+      const { sampleId } = await fullFlowToArchive('S-REV-001');
+
+      const reviewData1 = await useAppStore.getState().getArchiveReviewData(sampleId);
+      expect(reviewData1).not.toBeNull();
+      expect(reviewData1!.sample.isArchived).toBe(true);
+      expect(reviewData1!.sample.isLocked).toBe(true);
+      expect(reviewData1!.summary.totalTransfers).toBeGreaterThan(0);
+
+      await simulateRestart();
+      await useAppStore.getState().login('auditor01', '123456');
+
+      const reviewData2 = await useAppStore.getState().getArchiveReviewData(sampleId);
+      expect(reviewData2).not.toBeNull();
+      expect(reviewData2!.sample.id).toBe(reviewData1!.sample.id);
+      expect(reviewData2!.sample.sampleNo).toBe(reviewData1!.sample.sampleNo);
+      expect(reviewData2!.sample.isArchived).toBe(true);
+      expect(reviewData2!.sample.isLocked).toBe(true);
+      expect(reviewData2!.summary.totalTransfers).toBe(reviewData1!.summary.totalTransfers);
+      expect(reviewData2!.summary.successfulTransfers).toBe(reviewData1!.summary.successfulTransfers);
+      expect(reviewData2!.timeline.length).toBe(reviewData1!.timeline.length);
+    });
+
+    it('should show consistent rollback data after rollback and restart', async () => {
+      await initAndLogin();
+      const { sampleId, archiveTransferId } = await fullFlowToArchive('S-REV-002');
+
+      const rollbackResult = await useAppStore.getState().performRollback(
+        archiveTransferId,
+        '归档回退测试重启一致性'
+      );
+      expect(rollbackResult).not.toBeNull();
+
+      const reviewData1 = await useAppStore.getState().getArchiveReviewData(sampleId);
+      expect(reviewData1).not.toBeNull();
+      expect(reviewData1!.sample.isArchived).toBe(false);
+      expect(reviewData1!.summary.rollbackCount).toBe(1);
+      expect(reviewData1!.rollbackRecords.length).toBe(1);
+
+      await simulateRestart();
+      await useAppStore.getState().login('auditor01', '123456');
+
+      const reviewData2 = await useAppStore.getState().getArchiveReviewData(sampleId);
+      expect(reviewData2).not.toBeNull();
+      expect(reviewData2!.sample.isArchived).toBe(false);
+      expect(reviewData2!.summary.rollbackCount).toBe(1);
+      expect(reviewData2!.rollbackRecords.length).toBe(1);
+      expect(reviewData2!.rollbackRecords[0].reason).toBe('归档回退测试重启一致性');
+    });
+
+    it('should maintain export consistency after restart', async () => {
+      await initAndLogin();
+      const { sampleId } = await fullFlowToArchive('S-REV-003');
+
+      const jsonExport1 = await useAppStore.getState().exportArchiveReviewData(sampleId, { format: 'json' });
+      const parsed1 = JSON.parse(jsonExport1 as string);
+
+      await simulateRestart();
+      await useAppStore.getState().login('auditor01', '123456');
+
+      const jsonExport2 = await useAppStore.getState().exportArchiveReviewData(sampleId, { format: 'json' });
+      const parsed2 = JSON.parse(jsonExport2 as string);
+
+      expect(parsed2.sample.id).toBe(parsed1.sample.id);
+      expect(parsed2.sample.sampleNo).toBe(parsed1.sample.sampleNo);
+      expect(parsed2.summary.totalTransfers).toBe(parsed1.summary.totalTransfers);
+      expect(parsed2.timeline.length).toBe(parsed1.timeline.length);
+    });
+  });
+
+  describe('Complex Scenario Handling', () => {
+    it('should distinguish between valid transfers, failed attempts, and permission errors', async () => {
+      await initAndLogin();
+      const s = () => useAppStore.getState();
+
+      const rows = [makeRow('S-REV-004')];
+      await s().importBatch(rows, 'BATCH-REV-004');
+      const sampleId = s().samples.find((samp) => samp.sampleNo === 'S-REV-004')!.id;
+
+      await s().getAllLocations();
+      const locations = s().locations;
+      expect(locations.length).toBeGreaterThan(0);
+      const storageLoc = locations.find((l) => l.type === 'storage' && l.status === 'active')!;
+      const testingLoc = locations.find((l) => l.type === 'testing' && l.status === 'active')!;
+      const archiveLoc = locations.find((l) => l.type === 'archive' && l.status === 'active')!;
+
+      s().logout();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().login('collector01', '123456');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().getAllLocations();
+      await s().performInbound(sampleId, storageLoc.id);
+
+      s().logout();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().login('admin', '123456');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().getAllLocations();
+      await s().getAllUsers();
+
+      await s().performInbound(sampleId, storageLoc.id);
+
+      await s().performTestReceive(sampleId, testingLoc.id);
+
+      s().logout();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().login('collector01', '123456');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().getAllLocations();
+      await s().performInbound(sampleId, storageLoc.id);
+
+      s().logout();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().login('admin', '123456');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().getAllLocations();
+      await s().getAllUsers();
+      const testers = s().users.filter((u) => u.role === 'tester');
+      const tester = testers[0];
+      expect(tester).toBeDefined();
+      await s().performOutbound(sampleId, storageLoc.id, tester.id);
+
+      await s().performTestReceive(sampleId, testingLoc.id);
+
+      const testResult = await s().performTestComplete(sampleId, '合格');
+      expect(testResult).not.toBeNull();
+
+      s().logout();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().login('auditor01', '123456');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().getAllLocations();
+
+      await s().performReview(sampleId, '复核通过');
+      await s().performArchive(sampleId, archiveLoc.id);
+
+      const reviewData = await s().getArchiveReviewData(sampleId);
+      expect(reviewData).not.toBeNull();
+
+      const failedRecords = reviewData!.timeline.filter((t) => t.type === 'failed');
+      expect(failedRecords.length).toBeGreaterThanOrEqual(2);
+
+      const permissionErrors = failedRecords.filter(
+        (f) => f.errorCode === 'INSUFFICIENT_PERMISSION'
+      );
+      expect(permissionErrors.length).toBeGreaterThanOrEqual(1);
+
+      const statusErrors = failedRecords.filter(
+        (f) => f.errorCode === 'INVALID_STATUS_TRANSITION'
+      );
+      expect(statusErrors.length).toBeGreaterThanOrEqual(1);
+
+      const validTransfers = reviewData!.timeline.filter(
+        (t) => t.type === 'transfer' && !t.isRolledBack
+      );
+      expect(validTransfers.length).toBeGreaterThan(0);
+
+      const failedList = reviewData!.failedTransfers;
+      expect(failedList.length).toBeGreaterThanOrEqual(2);
+      expect(failedList.some((f) => f.errorCode === 'INSUFFICIENT_PERMISSION')).toBe(true);
+      expect(failedList.some((f) => f.errorCode === 'INVALID_STATUS_TRANSITION')).toBe(true);
+    });
+
+    it('should handle duplicate import attempts correctly', async () => {
+      await initAndLogin();
+      const s = () => useAppStore.getState();
+
+      const rows1 = [makeRow('S-REV-005'), makeRow('S-REV-005')];
+      const result1 = await s().importBatch(rows1, 'BATCH-REV-005');
+      expect(result1.importedCount).toBe(1);
+      expect(result1.failedRows.length).toBe(1);
+
+      const rows2 = [makeRow('S-REV-005'), makeRow('S-REV-006')];
+      const result2 = await s().importBatch(rows2, 'BATCH-REV-005B');
+      expect(result2.importedCount).toBe(1);
+      expect(result2.failedRows.length).toBe(1);
+      expect(result2.failedRows[0].errorCode).toBe('DUPLICATE_SAMPLE_NO');
+
+      const sampleId = s().samples.find((samp) => samp.sampleNo === 'S-REV-005')!.id;
+
+      await s().getAllLocations();
+      const locations = s().locations;
+      expect(locations.length).toBeGreaterThan(0);
+      const storageLoc = locations.find((l) => l.type === 'storage' && l.status === 'active')!;
+      const testingLoc = locations.find((l) => l.type === 'testing' && l.status === 'active')!;
+      const archiveLoc = locations.find((l) => l.type === 'archive' && l.status === 'active')!;
+
+      await s().performInbound(sampleId, storageLoc.id);
+
+      await s().getAllUsers();
+      const testers = s().users.filter((u) => u.role === 'tester');
+      const tester = testers[0];
+      expect(tester).toBeDefined();
+      await s().performOutbound(sampleId, storageLoc.id, tester.id);
+
+      await s().performTestReceive(sampleId, testingLoc.id);
+      await s().performTestComplete(sampleId, '合格');
+
+      s().logout();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().login('auditor01', '123456');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().getAllLocations();
+
+      await s().performReview(sampleId, '复核通过');
+      await s().performArchive(sampleId, archiveLoc.id);
+
+      const reviewData = await s().getArchiveReviewData(sampleId);
+      expect(reviewData).not.toBeNull();
+
+      const duplicateFails = reviewData!.failedTransfers.filter(
+        (f) => f.errorCode === 'DUPLICATE_SAMPLE_NO'
+      );
+      expect(duplicateFails.length).toBeGreaterThanOrEqual(1);
+
+      const failedTimeline = reviewData!.timeline.filter((t) => t.type === 'failed');
+      expect(failedTimeline.some((t) => t.errorCode === 'DUPLICATE_SAMPLE_NO')).toBe(true);
+    });
+
+    it('should show multiple rollbacks and re-archives correctly', async () => {
+      await initAndLogin();
+      const { sampleId, archiveTransferId: archiveId1 } = await fullFlowToArchive('S-REV-007', '第一次检测');
+
+      const store = useAppStore.getState();
+
+      const rollback1 = await store.performRollback(archiveId1, '第一次回退：需要重新检测');
+      expect(rollback1).not.toBeNull();
+
+      const locations = store.locations;
+      const testingLoc = locations.find((l) => l.type === 'testing' && l.status === 'active')!;
+      const testers = store.users.filter((u) => u.role === 'tester');
+      const tester = testers[0];
+
+      store.logout();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await store.login('tester01', '123456');
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const sample = store.samples.find((s) => s.id === sampleId)!;
+      const storageLoc = locations.find((l) => l.type === 'storage' && l.status === 'active')!;
+
+      await store.performOutbound(sampleId, storageLoc.id, tester.id);
+      await store.performTestReceive(sampleId, testingLoc.id);
+      await store.performTestComplete(sampleId, '第二次检测合格');
+
+      store.logout();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await store.login('auditor01', '123456');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await store.getAllLocations();
+      await store.performReview(sampleId, '复核通过');
+      const archiveLoc = locations.find((l) => l.type === 'archive' && l.status === 'active')!;
+      const archive2 = await store.performArchive(sampleId, archiveLoc.id);
+      expect(archive2).not.toBeNull();
+
+      const rollback2 = await store.performRollback(archive2!.id, '第二次回退：发现问题');
+      expect(rollback2).not.toBeNull();
+
+      await store.performReview(sampleId, '重新复核');
+      const archive3 = await store.performArchive(sampleId, archiveLoc.id);
+      expect(archive3).not.toBeNull();
+
+      const reviewData = await store.getArchiveReviewData(sampleId);
+      expect(reviewData).not.toBeNull();
+
+      expect(reviewData!.summary.rollbackCount).toBe(2);
+      expect(reviewData!.summary.archiveAttempts).toBe(3);
+      expect(reviewData!.rollbackRecords.length).toBe(2);
+      expect(reviewData!.sample.isArchived).toBe(true);
+
+      const archiveTransfers = reviewData!.timeline.filter(
+        (t) => t.action === '归档复核'
+      );
+      expect(archiveTransfers.length).toBe(3);
+
+      const rolledBackArchives = archiveTransfers.filter((t) => t.isRolledBack);
+      expect(rolledBackArchives.length).toBe(2);
+    });
+  });
+
+  describe('Data Consistency with Existing Modules', () => {
+    it('should match data with existing audit timeline', async () => {
+      await initAndLogin();
+      const { sampleId } = await fullFlowToArchive('S-REV-008');
+
+      const reviewData = await useAppStore.getState().getArchiveReviewData(sampleId);
+      expect(reviewData).not.toBeNull();
+
+      const auditLogs = await useAppStore.getState().getAuditLogs();
+      const sampleAuditLogs = auditLogs.filter(
+        (l) => l.targetId === sampleId || (l.details?.sampleNo as string) === 'S-REV-008'
+      );
+
+      expect(sampleAuditLogs.length).toBeGreaterThan(0);
+
+      const reviewTimelineActions = reviewData!.timeline
+        .filter((t) => t.type === 'transfer' || t.type === 'review')
+        .map((t) => t.action);
+
+      const auditActions = sampleAuditLogs.map((l) => {
+        if (l.action === 'sample:review') return '样本复核';
+        if (l.action.startsWith('transfer:')) {
+          const type = l.action.replace('transfer:', '');
+          const labels: Record<string, string> = {
+            inbound: '入库登记',
+            outbound: '出库交接',
+            test_receive: '检测接收',
+            test_complete: '检测完成',
+            archive: '归档复核',
+            rollback: '异常回退',
+          };
+          return labels[type] || type;
+        }
+        return null;
+      }).filter(Boolean);
+
+      for (const action of auditActions) {
+        expect(reviewTimelineActions).toContain(action);
+      }
+    });
+
+    it('should match failed transfer data with existing failure list', async () => {
+      await initAndLogin();
+      const s = () => useAppStore.getState();
+
+      const rows = [makeRow('S-REV-009')];
+      await s().importBatch(rows, 'BATCH-REV-009');
+      const sampleId = s().samples.find((samp) => samp.sampleNo === 'S-REV-009')!.id;
+
+      await s().getAllLocations();
+      const locations = s().locations;
+      expect(locations.length).toBeGreaterThan(0);
+      const storageLoc = locations.find((l) => l.type === 'storage' && l.status === 'active')!;
+      const testingLoc = locations.find((l) => l.type === 'testing' && l.status === 'active')!;
+      const archiveLoc = locations.find((l) => l.type === 'archive' && l.status === 'active')!;
+
+      await s().performTestReceive(sampleId, testingLoc.id);
+
+      await s().getFailedTransfers();
+      const allFailures = s().failedTransfers.filter((f) => f.sampleId === sampleId);
+      expect(allFailures.length).toBeGreaterThan(0);
+
+      await s().performInbound(sampleId, storageLoc.id);
+
+      await s().getAllUsers();
+      const testers = s().users.filter((u) => u.role === 'tester');
+      const tester = testers[0];
+      expect(tester).toBeDefined();
+      await s().performOutbound(sampleId, storageLoc.id, tester.id);
+      await s().performTestReceive(sampleId, testingLoc.id);
+      await s().performTestComplete(sampleId, '合格');
+
+      s().logout();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().login('auditor01', '123456');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await s().getAllLocations();
+
+      await s().performReview(sampleId, '复核通过');
+      await s().performArchive(sampleId, archiveLoc.id);
+
+      const reviewData = await s().getArchiveReviewData(sampleId);
+      expect(reviewData).not.toBeNull();
+
+      expect(reviewData!.failedTransfers.length).toBe(allFailures.length);
+      expect(reviewData!.failedTransfers[0].errorCode).toBe(allFailures[0].errorCode);
+      expect(reviewData!.failedTransfers[0].errorMessage).toBe(allFailures[0].errorMessage);
+    });
+
+    it('should match rollback data with existing rollback records', async () => {
+      await initAndLogin();
+      const { sampleId, archiveTransferId } = await fullFlowToArchive('S-REV-010');
+
+      const rollbackResult = await useAppStore.getState().performRollback(
+        archiveTransferId,
+        '一致性测试回退'
+      );
+      expect(rollbackResult).not.toBeNull();
+
+      const transfers = await useAppStore.getState().getTransferRecordsBySample(sampleId);
+      const rollbackTransfers = transfers.filter((t) => t.type === 'rollback');
+      expect(rollbackTransfers.length).toBe(1);
+
+      const reviewData = await useAppStore.getState().getArchiveReviewData(sampleId);
+      expect(reviewData).not.toBeNull();
+      expect(reviewData!.rollbackRecords.length).toBe(1);
+      expect(reviewData!.rollbackRecords[0].reason).toBe('一致性测试回退');
+      expect(reviewData!.rollbackRecords[0].fromStatus).toBe('archived');
+      expect(reviewData!.rollbackRecords[0].toStatus).toBe('tested');
+    });
+  });
+
+  describe('Permission Control', () => {
+    it('should grant archive:review permission to auditor', async () => {
+      await initAndLogin();
+      const store = useAppStore.getState();
+      store.logout();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await store.login('auditor01', '123456');
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const currentUser = store.currentUser;
+      expect(currentUser).not.toBeNull();
+
+      const result = hasPermission(currentUser, 'archive:review');
+      expect(result.allowed).toBe(true);
+
+      const exportResult = hasPermission(currentUser, 'archive:reviewExport');
+      expect(exportResult.allowed).toBe(true);
+    });
+
+    it('should grant all permissions to admin', async () => {
+      await initAndLogin();
+
+      const currentUser = useAppStore.getState().currentUser;
+      expect(currentUser).not.toBeNull();
+      expect(currentUser!.role).toBe('admin');
+
+      const result = hasPermission(currentUser, 'archive:review');
+      expect(result.allowed).toBe(true);
+
+      const exportResult = hasPermission(currentUser, 'archive:reviewExport');
+      expect(exportResult.allowed).toBe(true);
+    });
+
+    it('should deny archive:review permission to non-auditor roles', async () => {
+      await initAndLogin();
+      const store = useAppStore.getState();
+
+      const nonAuditorAccounts = [
+        { username: 'collector01', role: 'collector' },
+        { username: 'warehouse01', role: 'warehouse' },
+        { username: 'tester01', role: 'tester' },
+      ];
+
+      for (const account of nonAuditorAccounts) {
+        store.logout();
+        await new Promise(resolve => setTimeout(resolve, 10));
+        const loginResult = await store.login(account.username, '123456');
+        expect(loginResult).toBe(true);
+        await new Promise(resolve => setTimeout(resolve, 10));
+        await store.getAllUsers();
+        const freshStore = useAppStore.getState();
+        const currentUser = freshStore.currentUser;
+        expect(currentUser).not.toBeNull();
+
+        const result = hasPermission(currentUser, 'archive:review');
+        expect(result.allowed).toBe(false);
+        expect(result.errorCode).toBe('INSUFFICIENT_PERMISSION');
+
+        const exportResult = hasPermission(currentUser, 'archive:reviewExport');
+        expect(exportResult.allowed).toBe(false);
+      }
+    });
+
+    it('should allow auditor to export review data', async () => {
+      await initAndLogin();
+      const { sampleId } = await fullFlowToArchive('S-REV-011');
+
+      const store = useAppStore.getState();
+      store.logout();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await store.login('auditor01', '123456');
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const currentUser = store.currentUser;
+      const canExport = hasPermission(currentUser, 'archive:reviewExport');
+      expect(canExport.allowed).toBe(true);
+
+      const jsonExport = await useAppStore.getState().exportArchiveReviewData(sampleId, { format: 'json' });
+      expect(jsonExport).toBeDefined();
+      const parsed = JSON.parse(jsonExport as string);
+      expect(parsed.sample.sampleNo).toBe('S-REV-011');
+
+      const csvExport = await useAppStore.getState().exportArchiveReviewData(sampleId, { format: 'csv' });
+      expect(csvExport).toBeDefined();
+      expect((csvExport as string)).toContain('S-REV-011');
+    });
+
+    it('should include lock status correctly for archived samples', async () => {
+      await initAndLogin();
+      const { sampleId } = await fullFlowToArchive('S-REV-012');
+
+      const reviewData = await useAppStore.getState().getArchiveReviewData(sampleId);
+      expect(reviewData).not.toBeNull();
+      expect(reviewData!.sample.isLocked).toBe(true);
+      expect(reviewData!.sample.lockReason).toBe('样本已归档，所有操作被锁定');
+
+      const jsonExport = await useAppStore.getState().exportArchiveReviewData(sampleId, { format: 'json' });
+      const parsed = JSON.parse(jsonExport as string);
+      expect(parsed.sample.isLocked).toBe(true);
+      expect(parsed.sample.lockReason).toBe('样本已归档，所有操作被锁定');
+    });
+  });
+
+  describe('Export Content Validation', () => {
+    it('should include all required sections in JSON export', async () => {
+      await initAndLogin();
+      const { sampleId, archiveTransferId } = await fullFlowToArchive('S-REV-013');
+
+      await useAppStore.getState().performRollback(archiveTransferId, '测试导出内容');
+
+      const store = useAppStore.getState();
+      const sample = store.samples.find((s) => s.id === sampleId)!;
+      const locations = store.locations;
+      const testingLoc = locations.find((l) => l.type === 'testing' && l.status === 'active')!;
+      await store.performTestReceive(sampleId, testingLoc.id);
+
+      store.logout();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await store.login('auditor01', '123456');
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const jsonExport = await store.exportArchiveReviewData(sampleId, { format: 'json' });
+      const parsed = JSON.parse(jsonExport as string);
+
+      expect(parsed.exportedAt).toBeDefined();
+      expect(parsed.sample).toBeDefined();
+      expect(parsed.summary).toBeDefined();
+      expect(parsed.timeline).toBeDefined();
+      expect(parsed.failedTransfers).toBeDefined();
+      expect(parsed.rollbackRecords).toBeDefined();
+
+      expect(parsed.sample.sampleNo).toBe('S-REV-013');
+      expect(parsed.summary.failedAttempts).toBeGreaterThan(0);
+      expect(parsed.summary.rollbackCount).toBe(1);
+      expect(parsed.timeline.length).toBeGreaterThan(0);
+      expect(parsed.failedTransfers.length).toBeGreaterThan(0);
+      expect(parsed.rollbackRecords.length).toBe(1);
+    });
+
+    it('should include all required sections in CSV export', async () => {
+      await initAndLogin();
+      const { sampleId, archiveTransferId } = await fullFlowToArchive('S-REV-014');
+
+      await useAppStore.getState().performRollback(archiveTransferId, '测试CSV导出');
+
+      const csvExport = await useAppStore.getState().exportArchiveReviewData(sampleId, { format: 'csv' });
+      const csvStr = csvExport as string;
+
+      expect(csvStr).toContain('=== 样本归档复盘报告 ===');
+      expect(csvStr).toContain('=== 样本基本信息 ===');
+      expect(csvStr).toContain('=== 统计摘要 ===');
+      expect(csvStr).toContain('=== 完整时间线 ===');
+      expect(csvStr).toContain('=== 失败记录 ===');
+      expect(csvStr).toContain('=== 回退记录 ===');
+      expect(csvStr).toContain('S-REV-014');
+      expect(csvStr).toContain('测试CSV导出');
+    });
+
+    it('should respect export options for selective export', async () => {
+      await initAndLogin();
+      const { sampleId } = await fullFlowToArchive('S-REV-015');
+
+      const jsonFull = await useAppStore.getState().exportArchiveReviewData(sampleId, {
+        format: 'json',
+        includeFullTimeline: true,
+        includeFailedRecords: true,
+        includeRollbackRecords: true,
+      });
+      const parsedFull = JSON.parse(jsonFull as string);
+      expect(parsedFull.timeline).toBeDefined();
+      expect(parsedFull.failedTransfers).toBeDefined();
+      expect(parsedFull.rollbackRecords).toBeDefined();
+
+      const jsonMinimal = await useAppStore.getState().exportArchiveReviewData(sampleId, {
+        format: 'json',
+        includeFullTimeline: false,
+        includeFailedRecords: false,
+        includeRollbackRecords: false,
+      });
+      const parsedMinimal = JSON.parse(jsonMinimal as string);
+      expect(parsedMinimal.timeline).toBeUndefined();
+      expect(parsedMinimal.failedTransfers).toBeUndefined();
+      expect(parsedMinimal.rollbackRecords).toBeUndefined();
+      expect(parsedMinimal.sample).toBeDefined();
+      expect(parsedMinimal.summary).toBeDefined();
+    });
   });
 });

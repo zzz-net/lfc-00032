@@ -14,6 +14,9 @@ import type {
   AuditExportFormat,
   TransferType,
   SampleStatus,
+  ArchiveReviewData,
+  ArchiveReviewTimelineItem,
+  ArchiveReviewExportOptions,
 } from '@shared/types';
 import { getDB, generateId, nowISO } from '../lib/db';
 import { createInitialUsers, createInitialLocations } from '../lib/seed';
@@ -22,6 +25,7 @@ import {
   hashPassword,
   ERROR_CODES,
   STORES,
+  TRANSFER_TYPE_LABELS,
 } from '@shared/constants';
 import {
   validateInbound,
@@ -105,6 +109,12 @@ interface AppState {
   exportAuditData: (
     format: AuditExportFormat,
     filter?: AuditTimelineFilter
+  ) => Promise<string | Blob>;
+
+  getArchiveReviewData: (sampleId: string) => Promise<ArchiveReviewData | null>;
+  exportArchiveReviewData: (
+    sampleId: string,
+    options: ArchiveReviewExportOptions
   ) => Promise<string | Blob>;
 
   getSampleById: (id: string) => Sample | undefined;
@@ -199,12 +209,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       JSON.stringify({ userId: user.id, loginAt: nowISO() })
     );
 
-    await get().addAuditLog('login', 'user', { username }, user.id);
     set({ currentUser: user, error: null });
+    await get().addAuditLog('login', 'user', { username }, user.id);
     await get().getAllUsers();
     await get().getAllLocations();
     await get().getAllSamples();
     await get().getAllBatches();
+    await get().getFailedTransfers();
     return true;
   },
 
@@ -963,9 +974,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     const sampleTransfers = await (
       await db.transaction(STORES.transferRecords).store.index('by-sampleId')
     ).getAll(targetTransfer.sampleId);
-    const sortedTransfers = sampleTransfers.sort((a, b) =>
-      a.operatedAt.localeCompare(b.operatedAt)
-    );
+    
+    const typePriority: Record<TransferType, number> = {
+      import: 0,
+      inbound: 1,
+      outbound: 2,
+      test_receive: 3,
+      test_complete: 4,
+      archive: 5,
+      rollback: 6,
+    };
+    
+    const sortedTransfers = sampleTransfers.sort((a, b) => {
+      const timeCompare = a.operatedAt.localeCompare(b.operatedAt);
+      if (timeCompare !== 0) return timeCompare;
+      const priorityA = typePriority[a.type] ?? 100;
+      const priorityB = typePriority[b.type] ?? 100;
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      return a.id.localeCompare(b.id);
+    });
     const targetIndex = sortedTransfers.findIndex((t) => t.id === transferRecordId);
 
     if (targetIndex < 0) {
@@ -1177,6 +1204,367 @@ export const useAppStore = create<AppState>((set, get) => ({
         f.resolvedBy,
         f.resolvedAt,
       ]);
+    }
+
+    return Papa.unparse(csvRows);
+  },
+
+  getArchiveReviewData: async (sampleId) => {
+    const db = await getDB();
+    const sample = await db.get(STORES.samples, sampleId);
+    if (!sample) return null;
+
+    const allTransfers = await (
+      await db.transaction(STORES.transferRecords).store.index('by-sampleId')
+    ).getAll(sampleId);
+    
+    const typePriority: Record<TransferType, number> = {
+      import: 0,
+      inbound: 1,
+      outbound: 2,
+      test_receive: 3,
+      test_complete: 4,
+      archive: 5,
+      rollback: 6,
+    };
+    
+    const sortedTransfers = allTransfers.sort((a, b) => {
+      const timeCompare = a.operatedAt.localeCompare(b.operatedAt);
+      if (timeCompare !== 0) return timeCompare;
+      const priorityA = typePriority[a.type] ?? 100;
+      const priorityB = typePriority[b.type] ?? 100;
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      return a.id.localeCompare(b.id);
+    });
+
+    const allFailedRaw = await db.getAll(STORES.failedTransfers);
+    const sortedFailed = allFailedRaw
+      .filter((f) => {
+        if (f.sampleId === sampleId) return true;
+        if (f.sampleId === '' && f.payload?.sampleNo === sample.sampleNo) return true;
+        return false;
+      })
+      .sort((a, b) => a.attemptedAt.localeCompare(b.attemptedAt));
+
+    const allUsers = await db.getAll(STORES.users);
+    const allLocations = await db.getAll(STORES.locations);
+
+    const userMap = new Map(allUsers.map((u) => [u.id, u]));
+    const locationMap = new Map(allLocations.map((l) => [l.id, l]));
+
+    const getUserInfo = (userId?: string) => {
+      if (!userId) return { name: '-', role: '-' };
+      const user = userMap.get(userId);
+      return {
+        name: user?.displayName || userId,
+        role: user?.role || '-',
+      };
+    };
+
+    const getLocationCode = (locationId?: string) => {
+      if (!locationId) return '-';
+      return locationMap.get(locationId)?.code || locationId;
+    };
+
+    const archiveTransfer = sortedTransfers.find((t) => t.type === 'archive') || null;
+    const reviewAuditLog = (await db.getAll(STORES.auditLogs)).find(
+      (l) => l.action === 'sample:review' && l.targetId === sampleId
+    );
+
+    const timeline: ArchiveReviewTimelineItem[] = [];
+
+    for (const transfer of sortedTransfers) {
+      const operator = getUserInfo(transfer.operatorId);
+      const rolledBy = transfer.rolledBackBy ? getUserInfo(transfer.rolledBackBy) : null;
+
+      timeline.push({
+        id: transfer.id,
+        type: transfer.type === 'rollback' ? 'rollback' : 'transfer',
+        timestamp: transfer.operatedAt,
+        operatorName: operator.name,
+        operatorRole: operator.role,
+        action: TRANSFER_TYPE_LABELS[transfer.type],
+        status: transfer.fromStatus
+          ? `${transfer.fromStatus} → ${transfer.toStatus}`
+          : transfer.toStatus,
+        location:
+          transfer.fromLocationId || transfer.toLocationId
+            ? `${getLocationCode(transfer.fromLocationId)} → ${getLocationCode(transfer.toLocationId)}`
+            : undefined,
+        holder:
+          transfer.fromHolderId || transfer.toHolderId
+            ? `${getUserInfo(transfer.fromHolderId).name} → ${getUserInfo(transfer.toHolderId).name}`
+            : undefined,
+        testResult: transfer.testResult,
+        remark: transfer.remark,
+        isRolledBack: transfer.isRolledBack,
+        rollbackReason: transfer.rollbackReason,
+        rollbackBy: rolledBy?.name,
+        rollbackAt: transfer.rolledBackAt,
+      });
+    }
+
+    if (sample.reviewedBy && sample.reviewedAt) {
+      const reviewer = getUserInfo(sample.reviewedBy);
+      timeline.push({
+        id: `review-${sample.id}`,
+        type: 'review',
+        timestamp: sample.reviewedAt,
+        operatorName: reviewer.name,
+        operatorRole: reviewer.role,
+        action: '样本复核',
+        status: 'tested → reviewed',
+        remark: reviewAuditLog?.details?.remark as string | undefined,
+      });
+    }
+
+    for (const failed of sortedFailed) {
+      const attemptor = getUserInfo(failed.attemptedBy);
+      timeline.push({
+        id: `failed-${failed.id}`,
+        type: 'failed',
+        timestamp: failed.attemptedAt,
+        operatorName: attemptor.name,
+        operatorRole: attemptor.role,
+        action: `失败: ${TRANSFER_TYPE_LABELS[failed.attemptedType]}`,
+        errorCode: failed.errorCode,
+        errorMessage: failed.errorMessage,
+        payload: failed.payload,
+      });
+    }
+
+    timeline.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+
+    const failedTransfersList = sortedFailed.map((f) => ({
+      id: f.id,
+      attemptedType: f.attemptedType,
+      attemptedAt: f.attemptedAt,
+      attemptedByName: getUserInfo(f.attemptedBy).name,
+      errorCode: f.errorCode,
+      errorMessage: f.errorMessage,
+      resolved: f.resolved,
+    }));
+
+    const rollbackRecordsList = sortedTransfers
+      .filter((t) => t.type === 'rollback')
+      .map((t) => {
+        const rollbackInfo = getUserInfo(t.operatorId);
+        const rolledBackType = t.remark?.includes('回退交接记录')
+          ? (t.remark.match(/回退交接记录: (\w+)/)?.[1] as TransferType) || 'import'
+          : 'import';
+        const rolledBackRecordId = t.remark?.match(/回退交接记录: (\w+)/)?.[1];
+        const rolledBackRecord = rolledBackRecordId
+          ? sortedTransfers.find((st) => st.id === rolledBackRecordId)
+          : null;
+        const reason = rolledBackRecord?.rollbackReason
+          || t.remark?.match(/原因: (.+)$/)?.[1]
+          || '';
+        return {
+          id: t.id,
+          rollbackAt: t.operatedAt,
+          rollbackByName: rollbackInfo.name,
+          reason,
+          rolledBackTransferType: rolledBackType,
+          fromStatus: t.fromStatus || 'imported',
+          toStatus: t.toStatus,
+        };
+      });
+
+    const archivedByUser = archiveTransfer ? getUserInfo(archiveTransfer.operatorId) : null;
+    const reviewedByUser = sample.reviewedBy ? getUserInfo(sample.reviewedBy) : null;
+
+    const summary = {
+      totalTransfers: sortedTransfers.length,
+      successfulTransfers: sortedTransfers.filter((t) => !t.isRolledBack).length,
+      failedAttempts: sortedFailed.length,
+      rollbackCount: rollbackRecordsList.length,
+      archiveAttempts: sortedTransfers.filter((t) => t.type === 'archive').length,
+      lastArchiveAt: sortedTransfers
+        .filter((t) => t.type === 'archive')
+        .sort((a, b) => b.operatedAt.localeCompare(a.operatedAt))[0]?.operatedAt,
+      lastRollbackAt: sortedTransfers
+        .filter((t) => t.type === 'rollback')
+        .sort((a, b) => b.operatedAt.localeCompare(a.operatedAt))[0]?.operatedAt,
+    };
+
+    let isLocked = false;
+    let lockReason: string | undefined;
+
+    if (sample.isArchived) {
+      isLocked = true;
+      lockReason = '样本已归档，所有操作被锁定';
+    }
+
+    return {
+      sample: {
+        id: sample.id,
+        sampleNo: sample.sampleNo,
+        type: sample.type,
+        currentStatus: sample.currentStatus,
+        isArchived: sample.isArchived,
+        archivedAt: sample.archivedAt,
+        archivedBy: archivedByUser?.name,
+        reviewedBy: reviewedByUser?.name,
+        reviewedAt: sample.reviewedAt,
+        isLocked,
+        lockReason,
+      },
+      archiveTransfer,
+      timeline,
+      failedTransfers: failedTransfersList,
+      rollbackRecords: rollbackRecordsList,
+      summary,
+    };
+  },
+
+  exportArchiveReviewData: async (sampleId, options) => {
+    const reviewData = await get().getArchiveReviewData(sampleId);
+    if (!reviewData) throw new Error('样本不存在或无复盘数据');
+
+    const { format, includeFullTimeline = true, includeFailedRecords = true, includeRollbackRecords = true } = options;
+
+    const exportData = {
+      exportedAt: nowISO(),
+      sample: reviewData.sample,
+      summary: reviewData.summary,
+      timeline: includeFullTimeline ? reviewData.timeline : undefined,
+      failedTransfers: includeFailedRecords ? reviewData.failedTransfers : undefined,
+      rollbackRecords: includeRollbackRecords ? reviewData.rollbackRecords : undefined,
+    };
+
+    if (format === 'json') {
+      return JSON.stringify(exportData, null, 2);
+    }
+
+    const csvRows: string[][] = [];
+
+    csvRows.push(['=== 样本归档复盘报告 ===']);
+    csvRows.push(['导出时间', exportData.exportedAt]);
+    csvRows.push([]);
+
+    csvRows.push(['=== 样本基本信息 ===']);
+    csvRows.push(['样本编号', reviewData.sample.sampleNo]);
+    csvRows.push(['样本类型', reviewData.sample.type]);
+    csvRows.push(['当前状态', reviewData.sample.currentStatus]);
+    csvRows.push(['是否归档', reviewData.sample.isArchived ? '是' : '否']);
+    if (reviewData.sample.archivedAt) {
+      csvRows.push(['归档时间', reviewData.sample.archivedAt]);
+      csvRows.push(['归档人', reviewData.sample.archivedBy || '-']);
+    }
+    if (reviewData.sample.reviewedAt) {
+      csvRows.push(['复核时间', reviewData.sample.reviewedAt]);
+      csvRows.push(['复核人', reviewData.sample.reviewedBy || '-']);
+    }
+    csvRows.push(['是否锁定', reviewData.sample.isLocked ? '是' : '否']);
+    if (reviewData.sample.lockReason) {
+      csvRows.push(['锁定原因', reviewData.sample.lockReason]);
+    }
+    csvRows.push([]);
+
+    csvRows.push(['=== 统计摘要 ===']);
+    csvRows.push(['总流转次数', String(reviewData.summary.totalTransfers)]);
+    csvRows.push(['成功流转次数', String(reviewData.summary.successfulTransfers)]);
+    csvRows.push(['失败尝试次数', String(reviewData.summary.failedAttempts)]);
+    csvRows.push(['回退次数', String(reviewData.summary.rollbackCount)]);
+    csvRows.push(['归档尝试次数', String(reviewData.summary.archiveAttempts)]);
+    if (reviewData.summary.lastArchiveAt) {
+      csvRows.push(['最后归档时间', reviewData.summary.lastArchiveAt]);
+    }
+    if (reviewData.summary.lastRollbackAt) {
+      csvRows.push(['最后回退时间', reviewData.summary.lastRollbackAt]);
+    }
+    csvRows.push([]);
+
+    if (includeFullTimeline && reviewData.timeline.length > 0) {
+      csvRows.push(['=== 完整时间线 ===']);
+      csvRows.push([
+        '时间',
+        '类型',
+        '操作',
+        '操作人',
+        '角色',
+        '状态变更',
+        '库位变更',
+        '持有人变更',
+        '检测结果',
+        '备注',
+        '是否回退',
+        '回退原因',
+        '错误码',
+        '错误信息',
+      ]);
+      for (const item of reviewData.timeline) {
+        csvRows.push([
+          item.timestamp,
+          item.type,
+          item.action,
+          item.operatorName,
+          item.operatorRole,
+          item.status || '',
+          item.location || '',
+          item.holder || '',
+          item.testResult || '',
+          item.remark || '',
+          item.isRolledBack ? '是' : '否',
+          item.rollbackReason || '',
+          item.errorCode || '',
+          item.errorMessage || '',
+        ]);
+      }
+      csvRows.push([]);
+    }
+
+    if (includeFailedRecords) {
+      csvRows.push(['=== 失败记录 ===']);
+      if (reviewData.failedTransfers.length > 0) {
+        csvRows.push([
+          '尝试时间',
+          '尝试操作',
+          '尝试人',
+          '错误码',
+          '错误信息',
+          '是否已解决',
+        ]);
+        for (const f of reviewData.failedTransfers) {
+          csvRows.push([
+            f.attemptedAt,
+            TRANSFER_TYPE_LABELS[f.attemptedType],
+            f.attemptedByName,
+            f.errorCode,
+            f.errorMessage,
+            f.resolved ? '是' : '否',
+          ]);
+        }
+      } else {
+        csvRows.push(['无失败记录']);
+      }
+      csvRows.push([]);
+    }
+
+    if (includeRollbackRecords) {
+      csvRows.push(['=== 回退记录 ===']);
+      if (reviewData.rollbackRecords.length > 0) {
+        csvRows.push([
+          '回退时间',
+          '回退人',
+          '回退原因',
+          '被回退操作',
+          '从状态',
+          '到状态',
+        ]);
+        for (const r of reviewData.rollbackRecords) {
+          csvRows.push([
+            r.rollbackAt,
+            r.rollbackByName,
+            r.reason,
+            TRANSFER_TYPE_LABELS[r.rolledBackTransferType],
+            r.fromStatus,
+            r.toStatus,
+          ]);
+        }
+      } else {
+        csvRows.push(['无回退记录']);
+      }
     }
 
     return Papa.unparse(csvRows);

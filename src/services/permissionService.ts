@@ -41,6 +41,8 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'failed:view',
     'audit:view',
     'audit:export',
+    'archive:review',
+    'archive:reviewExport',
     'location:view',
   ],
   admin: ['*'],
