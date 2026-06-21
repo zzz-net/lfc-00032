@@ -22,6 +22,10 @@ import type {
   FlowTraceExportOptions,
   FlowTraceFilter,
   FlowTraceStageKey,
+  FlowTracePermissionAction,
+  FlowTracePermissionEnvelope,
+  FlowTraceOperationLog,
+  FlowTracePermissionCheck,
 } from '@shared/types';
 import { getDB, generateId, nowISO } from '../lib/db';
 import { createInitialUsers, createInitialLocations } from '../lib/seed';
@@ -46,6 +50,23 @@ import {
   validateArchive,
   validateRollback,
 } from '../services/transferValidator';
+import {
+  checkFlowTracePermission,
+  checkServiceRestartReauth,
+  checkPermissionMidOperation,
+  acquireExportSlot,
+  releaseExportSlot,
+  redactSampleSummary,
+  redactDetailData,
+  redactExportData,
+  createOperationLog,
+  isAuditorRole,
+  wrapWithPermissionEnvelope,
+  revokePermission,
+  restorePermission,
+  getOperationLogs,
+  getServiceStatus,
+} from '../services/flowTracePermissionService';
 import Papa from 'papaparse';
 
 interface AppState {
@@ -129,11 +150,21 @@ interface AppState {
   ) => Promise<string | Blob>;
 
   getFlowTraceList: (filter?: FlowTraceFilter) => Promise<FlowTraceSampleSummary[]>;
+  getFlowTraceListSecure: (filter?: FlowTraceFilter) => Promise<FlowTracePermissionEnvelope<FlowTraceSampleSummary[]>>;
   getFlowTraceData: (sampleId: string) => Promise<FlowTraceDetailData | null>;
+  getFlowTraceDataSecure: (sampleId: string) => Promise<FlowTracePermissionEnvelope<FlowTraceDetailData>>;
   exportFlowTraceData: (
     sampleId: string,
     options: FlowTraceExportOptions
   ) => Promise<string | Blob>;
+  exportFlowTraceDataSecure: (
+    sampleId: string,
+    options: FlowTraceExportOptions
+  ) => Promise<FlowTracePermissionEnvelope<string>>;
+  getFlowTraceOperationLogs: () => FlowTraceOperationLog[];
+  getFlowTraceServiceStatus: () => ReturnType<typeof getServiceStatus>;
+  revokeFlowTracePermission: (userId: string, reason: string) => void;
+  restoreFlowTracePermission: (userId: string) => void;
 
   getSampleById: (id: string) => Sample | undefined;
   getLocationById: (id: string) => Location | undefined;
@@ -1719,6 +1750,83 @@ export const useAppStore = create<AppState>((set, get) => ({
     return summaries;
   },
 
+  getFlowTraceListSecure: async (filter) => {
+    const currentUser = get().currentUser;
+    const operationStartAt = nowISO();
+
+    const restartCheck = checkServiceRestartReauth(currentUser);
+    if (restartCheck) {
+      createOperationLog({
+        user: currentUser,
+        action: 'viewList',
+        status: 'denied',
+        permissionDecision: 'deny',
+        denyReason: restartCheck.reason,
+        errorCode: restartCheck.errorCode,
+      });
+      return wrapWithPermissionEnvelope<FlowTraceSampleSummary[]>(null, restartCheck);
+    }
+
+    const permCheck = checkFlowTracePermission(currentUser, 'viewList');
+
+    if (permCheck.decision === 'deny') {
+      createOperationLog({
+        user: currentUser,
+        action: 'viewList',
+        status: 'denied',
+        permissionDecision: 'deny',
+        denyReason: permCheck.reason,
+        errorCode: permCheck.errorCode,
+      });
+      return wrapWithPermissionEnvelope<FlowTraceSampleSummary[]>(null, permCheck);
+    }
+
+    const midCheck = checkPermissionMidOperation(currentUser, 'viewList', operationStartAt);
+    if (midCheck) {
+      createOperationLog({
+        user: currentUser,
+        action: 'viewList',
+        status: 'denied',
+        permissionDecision: 'deny',
+        denyReason: midCheck.reason,
+        errorCode: midCheck.errorCode,
+      });
+      return wrapWithPermissionEnvelope<FlowTraceSampleSummary[]>(null, midCheck);
+    }
+
+    try {
+      const rawData = await get().getFlowTraceList(filter);
+      const isAuditor = currentUser ? isAuditorRole(currentUser.role) : false;
+      const { data, redaction } = redactSampleSummary(rawData, isAuditor);
+
+      const status = redaction ? 'redacted' : 'success';
+      createOperationLog({
+        user: currentUser,
+        action: 'viewList',
+        status,
+        permissionDecision: permCheck.decision,
+        dataSize: data.length,
+      });
+
+      return wrapWithPermissionEnvelope<FlowTraceSampleSummary[]>(data, permCheck, redaction);
+    } catch (e) {
+      createOperationLog({
+        user: currentUser,
+        action: 'viewList',
+        status: 'error',
+        permissionDecision: permCheck.decision,
+        errorCode: 'UNKNOWN_ERROR',
+        denyReason: e instanceof Error ? e.message : '未知错误',
+      });
+      return wrapWithPermissionEnvelope<FlowTraceSampleSummary[]>(null, {
+        ...permCheck,
+        decision: 'deny',
+        reason: e instanceof Error ? e.message : '未知错误',
+        errorCode: 'UNKNOWN_ERROR',
+      });
+    }
+  },
+
   getFlowTraceData: async (sampleId) => {
     const db = await getDB();
     const sample = await db.get(STORES.samples, sampleId);
@@ -2101,6 +2209,88 @@ export const useAppStore = create<AppState>((set, get) => ({
     };
   },
 
+  getFlowTraceDataSecure: async (sampleId) => {
+    const currentUser = get().currentUser;
+    const operationStartAt = nowISO();
+
+    const restartCheck = checkServiceRestartReauth(currentUser);
+    if (restartCheck) {
+      createOperationLog({
+        user: currentUser,
+        action: 'viewDetail',
+        status: 'denied',
+        permissionDecision: 'deny',
+        sampleId,
+        denyReason: restartCheck.reason,
+        errorCode: restartCheck.errorCode,
+      });
+      return wrapWithPermissionEnvelope<FlowTraceDetailData>(null, restartCheck);
+    }
+
+    const permCheck = checkFlowTracePermission(currentUser, 'viewDetail', sampleId);
+
+    if (permCheck.decision === 'deny') {
+      createOperationLog({
+        user: currentUser,
+        action: 'viewDetail',
+        status: 'denied',
+        permissionDecision: 'deny',
+        sampleId,
+        denyReason: permCheck.reason,
+        errorCode: permCheck.errorCode,
+      });
+      return wrapWithPermissionEnvelope<FlowTraceDetailData>(null, permCheck);
+    }
+
+    const midCheck = checkPermissionMidOperation(currentUser, 'viewDetail', operationStartAt);
+    if (midCheck) {
+      createOperationLog({
+        user: currentUser,
+        action: 'viewDetail',
+        status: 'denied',
+        permissionDecision: 'deny',
+        sampleId,
+        denyReason: midCheck.reason,
+        errorCode: midCheck.errorCode,
+      });
+      return wrapWithPermissionEnvelope<FlowTraceDetailData>(null, midCheck);
+    }
+
+    try {
+      const rawData = await get().getFlowTraceData(sampleId);
+      const isAuditor = currentUser ? isAuditorRole(currentUser.role) : false;
+      const { data, redaction } = redactDetailData(rawData, isAuditor);
+
+      const status = redaction ? 'redacted' : 'success';
+      createOperationLog({
+        user: currentUser,
+        action: 'viewDetail',
+        status,
+        permissionDecision: permCheck.decision,
+        sampleId,
+        sampleNo: data?.sample.sampleNo,
+      });
+
+      return wrapWithPermissionEnvelope<FlowTraceDetailData>(data, permCheck, redaction);
+    } catch (e) {
+      createOperationLog({
+        user: currentUser,
+        action: 'viewDetail',
+        status: 'error',
+        permissionDecision: permCheck.decision,
+        sampleId,
+        errorCode: 'UNKNOWN_ERROR',
+        denyReason: e instanceof Error ? e.message : '未知错误',
+      });
+      return wrapWithPermissionEnvelope<FlowTraceDetailData>(null, {
+        ...permCheck,
+        decision: 'deny',
+        reason: e instanceof Error ? e.message : '未知错误',
+        errorCode: 'UNKNOWN_ERROR',
+      });
+    }
+  },
+
   exportFlowTraceData: async (sampleId, options) => {
     const traceData = await get().getFlowTraceData(sampleId);
     if (!traceData) throw new Error('样本不存在或无流转追溯数据');
@@ -2375,6 +2565,176 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     return Papa.unparse(csvRows);
+  },
+
+  exportFlowTraceDataSecure: async (sampleId, options) => {
+    const currentUser = get().currentUser;
+    const operationStartAt = nowISO();
+    let exportOperationId = '';
+
+    const slotResult = acquireExportSlot(currentUser);
+    exportOperationId = slotResult.operationId;
+
+    if (!slotResult.allowed) {
+      const restartCheck = checkServiceRestartReauth(currentUser);
+      const baseCheck = restartCheck || {
+        action: 'export' as const,
+        userId: currentUser?.id || '',
+        userRole: currentUser?.role || 'collector',
+        timestamp: nowISO(),
+        decision: 'deny' as const,
+        reason: slotResult.reason || '导出请求被拒绝',
+        errorCode: ERROR_CODES.INSUFFICIENT_PERMISSION,
+      };
+
+      createOperationLog({
+        user: currentUser,
+        action: 'export',
+        status: 'denied',
+        permissionDecision: 'deny',
+        sampleId,
+        exportOptions: options,
+        denyReason: slotResult.reason,
+        errorCode: ERROR_CODES.INSUFFICIENT_PERMISSION,
+      });
+
+      return wrapWithPermissionEnvelope<string>('', baseCheck);
+    }
+
+    try {
+      const restartCheck = checkServiceRestartReauth(currentUser);
+      if (restartCheck) {
+        createOperationLog({
+          user: currentUser,
+          action: 'export',
+          status: 'denied',
+          permissionDecision: 'deny',
+          sampleId,
+          exportOptions: options,
+          denyReason: restartCheck.reason,
+          errorCode: restartCheck.errorCode,
+        });
+        return wrapWithPermissionEnvelope<string>('', restartCheck);
+      }
+
+      const permCheck = checkFlowTracePermission(currentUser, 'export', sampleId);
+
+      if (permCheck.decision === 'deny') {
+        createOperationLog({
+          user: currentUser,
+          action: 'export',
+          status: 'denied',
+          permissionDecision: 'deny',
+          sampleId,
+          exportOptions: options,
+          denyReason: permCheck.reason,
+          errorCode: permCheck.errorCode,
+        });
+        return wrapWithPermissionEnvelope<string>('', permCheck);
+      }
+
+      const midCheck = checkPermissionMidOperation(currentUser, 'export', operationStartAt);
+      if (midCheck) {
+        createOperationLog({
+          user: currentUser,
+          action: 'export',
+          status: 'denied',
+          permissionDecision: 'deny',
+          sampleId,
+          exportOptions: options,
+          denyReason: midCheck.reason,
+          errorCode: midCheck.errorCode,
+        });
+        return wrapWithPermissionEnvelope<string>('', midCheck);
+      }
+
+      const rawData = await get().exportFlowTraceData(sampleId, options);
+      const dataStr = typeof rawData === 'string' ? rawData : '';
+      const isAuditor = currentUser ? isAuditorRole(currentUser.role) : false;
+      const { data, redaction } = redactExportData(dataStr, options.format, isAuditor);
+
+      let sampleNo: string | undefined;
+      try {
+        if (dataStr && options.format === 'json') {
+          const parsed = JSON.parse(dataStr);
+          sampleNo = parsed.sample?.sampleNo;
+        } else {
+          const sample = get().getSampleById(sampleId);
+          sampleNo = sample?.sampleNo;
+        }
+      } catch {
+        const sample = get().getSampleById(sampleId);
+        sampleNo = sample?.sampleNo;
+      }
+
+      const status = redaction ? 'redacted' : 'success';
+      createOperationLog({
+        user: currentUser,
+        action: 'export',
+        status,
+        permissionDecision: permCheck.decision,
+        sampleId,
+        sampleNo,
+        exportOptions: options,
+        dataSize: data.length,
+      });
+
+      releaseExportSlot(currentUser?.id || '', exportOperationId);
+
+      return wrapWithPermissionEnvelope<string>(data, permCheck, redaction);
+    } catch (e) {
+      releaseExportSlot(currentUser?.id || '', exportOperationId);
+
+      createOperationLog({
+        user: currentUser,
+        action: 'export',
+        status: 'error',
+        permissionDecision: 'deny',
+        sampleId,
+        exportOptions: options,
+        errorCode: 'UNKNOWN_ERROR',
+        denyReason: e instanceof Error ? e.message : '未知错误',
+      });
+
+      return wrapWithPermissionEnvelope<string>('', {
+        action: 'export',
+        userId: currentUser?.id || '',
+        userRole: currentUser?.role || 'collector',
+        sampleId,
+        timestamp: nowISO(),
+        decision: 'deny',
+        reason: e instanceof Error ? e.message : '未知错误',
+        errorCode: 'UNKNOWN_ERROR',
+      });
+    }
+  },
+
+  getFlowTraceOperationLogs: () => {
+    return getOperationLogs();
+  },
+
+  getFlowTraceServiceStatus: () => {
+    return getServiceStatus();
+  },
+
+  revokeFlowTracePermission: (userId, reason) => {
+    revokePermission(userId, reason);
+    get().addAuditLog(
+      'flowTrace:revokePermission',
+      'user',
+      { userId, reason },
+      userId
+    );
+  },
+
+  restoreFlowTracePermission: (userId) => {
+    restorePermission(userId);
+    get().addAuditLog(
+      'flowTrace:restorePermission',
+      'user',
+      { userId },
+      userId
+    );
   },
 
   getSampleById: (id) => get().samples.find((s) => s.id === id),

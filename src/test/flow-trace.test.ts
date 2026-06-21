@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { useAppStore } from '../store/useAppStore';
 import { hasPermission } from '../services/permissionService';
+import { checkFlowTracePermission } from '../services/flowTracePermissionService';
 import type { SampleImportRow, FlowTraceDetailData, FlowTraceSampleSummary } from '@shared/types';
 import { resetDBInstance } from '../lib/db';
 import { FLOW_TRACE_STAGE_LABELS, ERROR_CATEGORY_LABELS, STATUS_LABELS } from '@shared/constants';
@@ -773,7 +774,7 @@ describe('Flow Trace Desk - Permission Control', () => {
     expect(hasPermission(currentUser, 'flowTrace:export').allowed).toBe(true);
   });
 
-  it('should deny flowTrace permissions to non-auditor roles', async () => {
+  it('should grant basic flowTrace permissions to non-auditor roles with data redaction', async () => {
     await initAndLogin();
 
     const nonAuditorAccounts = [
@@ -793,9 +794,13 @@ describe('Flow Trace Desk - Permission Control', () => {
       expect(currentUser).not.toBeNull();
       expect(currentUser!.role).toBe(account.role);
 
-      expect(hasPermission(currentUser, 'flowTrace:view').allowed).toBe(false);
-      expect(hasPermission(currentUser, 'flowTrace:viewDetail').allowed).toBe(false);
-      expect(hasPermission(currentUser, 'flowTrace:export').allowed).toBe(false);
+      expect(hasPermission(currentUser, 'flowTrace:view').allowed).toBe(true);
+      expect(hasPermission(currentUser, 'flowTrace:viewDetail').allowed).toBe(true);
+      expect(hasPermission(currentUser, 'flowTrace:export').allowed).toBe(true);
+
+      const permCheck = checkFlowTracePermission(currentUser, 'viewList');
+      expect(permCheck.decision).toBe('redact');
+      expect(permCheck.reason).toBe('非审核员角色，数据将被脱敏');
     }
   });
 
@@ -815,7 +820,7 @@ describe('Flow Trace Desk - Permission Control', () => {
     expect(parsed.sample.sampleNo).toBe('S-FT-PERMEXP-001');
   });
 
-  it('collector should not see flow trace menu item (role-based)', async () => {
+  it('collector should have basic flowTrace permissions but with data redaction', async () => {
     await initAndLogin();
 
     s().logout();
@@ -829,7 +834,11 @@ describe('Flow Trace Desk - Permission Control', () => {
     expect(currentUser!.role).toBe('collector');
 
     const canView = hasPermission(currentUser, 'flowTrace:view');
-    expect(canView.allowed).toBe(false);
+    expect(canView.allowed).toBe(true);
+
+    const permCheck = checkFlowTracePermission(currentUser, 'viewList');
+    expect(permCheck.decision).toBe('redact');
+    expect(permCheck.reason).toBe('非审核员角色，数据将被脱敏');
   });
 });
 

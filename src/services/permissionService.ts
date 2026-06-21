@@ -13,6 +13,9 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'sample:view',
     'sample:viewDetail',
     'transfer:view',
+    'flowTrace:view',
+    'flowTrace:viewDetail',
+    'flowTrace:export',
   ],
   warehouse: [
     'sample:view',
@@ -22,6 +25,9 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'transfer:inbound',
     'transfer:outbound',
     'transfer:view',
+    'flowTrace:view',
+    'flowTrace:viewDetail',
+    'flowTrace:export',
   ],
   tester: [
     'sample:view',
@@ -31,6 +37,9 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'transfer:testComplete',
     'transfer:view',
     'location:view',
+    'flowTrace:view',
+    'flowTrace:viewDetail',
+    'flowTrace:export',
   ],
   auditor: [
     'sample:view',

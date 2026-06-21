@@ -25,11 +25,15 @@ import {
   CheckCircle,
   Circle,
   GitBranch,
+  Eye,
+  EyeOff,
+  Info,
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { Modal } from '@/components/common/Modal';
 import { hasPermission } from '@/services/permissionService';
+import { isAuditorRole } from '@/services/flowTracePermissionService';
 import {
   TRANSFER_TYPE_LABELS,
   TRANSFER_TYPE_COLORS,
@@ -45,6 +49,8 @@ import type {
   FlowTraceExportOptions,
   FlowTraceFilter,
   FlowTraceStage,
+  FlowTracePermissionCheck,
+  FlowTraceRedactedData,
 } from '@shared/types';
 
 const formatDate = (iso: string) => new Date(iso).toLocaleString('zh-CN');
@@ -121,9 +127,9 @@ const getStageStatusStyle = (status: FlowTraceStage['status']) => {
 export const FlowTraceDesk = () => {
   const samples = useAppStore((s) => s.samples);
   const currentUser = useAppStore((s) => s.currentUser);
-  const getFlowTraceList = useAppStore((s) => s.getFlowTraceList);
-  const getFlowTraceData = useAppStore((s) => s.getFlowTraceData);
-  const exportFlowTraceData = useAppStore((s) => s.exportFlowTraceData);
+  const getFlowTraceListSecure = useAppStore((s) => s.getFlowTraceListSecure);
+  const getFlowTraceDataSecure = useAppStore((s) => s.getFlowTraceDataSecure);
+  const exportFlowTraceDataSecure = useAppStore((s) => s.exportFlowTraceDataSecure);
 
   const [sampleList, setSampleList] = useState<FlowTraceSampleSummary[]>([]);
   const [selectedSampleId, setSelectedSampleId] = useState('');
@@ -134,6 +140,15 @@ export const FlowTraceDesk = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState<'json' | 'csv'>('csv');
   const [exportSuccess, setExportSuccess] = useState(false);
+
+  const [listPermission, setListPermission] = useState<FlowTracePermissionCheck | null>(null);
+  const [detailPermission, setDetailPermission] = useState<FlowTracePermissionCheck | null>(null);
+  const [listRedaction, setListRedaction] = useState<FlowTraceRedactedData | null>(null);
+  const [detailRedaction, setDetailRedaction] = useState<FlowTraceRedactedData | null>(null);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
+  const [lastAccessAt, setLastAccessAt] = useState<string | null>(null);
+
+  const isAuditor = currentUser ? isAuditorRole(currentUser.role) : false;
 
   const [filterKeyword, setFilterKeyword] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -148,6 +163,7 @@ export const FlowTraceDesk = () => {
 
   const loadSampleList = async () => {
     setListLoading(true);
+    setPermissionError(null);
     try {
       const filter: FlowTraceFilter = {};
       if (filterKeyword) filter.keyword = filterKeyword;
@@ -157,10 +173,21 @@ export const FlowTraceDesk = () => {
       if (filterIsLocked) filter.isLocked = true;
       if (filterIsArchived !== undefined) filter.isArchived = filterIsArchived;
 
-      const list = await getFlowTraceList(filter);
-      setSampleList(list);
+      const envelope = await getFlowTraceListSecure(filter);
+      setListPermission(envelope.permission);
+      setListRedaction(envelope.redaction || null);
+      setLastAccessAt(envelope.timestamp);
+
+      if (envelope.permission.decision === 'deny') {
+        setPermissionError(envelope.permission.reason);
+        setSampleList([]);
+        return;
+      }
+
+      setSampleList(envelope.data || []);
     } catch (e) {
       console.error(e);
+      setPermissionError(e instanceof Error ? e.message : '加载失败');
     } finally {
       setListLoading(false);
     }
@@ -169,14 +196,27 @@ export const FlowTraceDesk = () => {
   const loadTraceData = async (sampleId: string) => {
     if (!sampleId) {
       setTraceData(null);
+      setDetailPermission(null);
+      setDetailRedaction(null);
       return;
     }
     setLoading(true);
+    setPermissionError(null);
     try {
-      const data = await getFlowTraceData(sampleId);
-      setTraceData(data);
+      const envelope = await getFlowTraceDataSecure(sampleId);
+      setDetailPermission(envelope.permission);
+      setDetailRedaction(envelope.redaction || null);
+
+      if (envelope.permission.decision === 'deny') {
+        setPermissionError(envelope.permission.reason);
+        setTraceData(null);
+        return;
+      }
+
+      setTraceData(envelope.data);
     } catch (e) {
       console.error(e);
+      setPermissionError(e instanceof Error ? e.message : '加载失败');
     } finally {
       setLoading(false);
     }
@@ -199,6 +239,7 @@ export const FlowTraceDesk = () => {
 
     setExportLoading(true);
     setExportSuccess(false);
+    setPermissionError(null);
 
     try {
       const options: FlowTraceExportOptions = {
@@ -210,9 +251,17 @@ export const FlowTraceDesk = () => {
         includeSummary: true,
       };
 
-      const data = await exportFlowTraceData(traceData.sample.id, options);
+      const envelope = await exportFlowTraceDataSecure(traceData.sample.id, options);
+
+      if (envelope.permission.decision === 'deny') {
+        setPermissionError(envelope.permission.reason);
+        return;
+      }
+
+      const data = envelope.data;
       const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const filename = `flow_trace_${traceData.sample.sampleNo}_${timestamp}.${exportFormat}`;
+      const suffix = envelope.redaction ? '_redacted' : '';
+      const filename = `flow_trace_${traceData.sample.sampleNo}_${timestamp}${suffix}.${exportFormat}`;
 
       let blob: Blob;
       if (exportFormat === 'json') {
@@ -235,6 +284,7 @@ export const FlowTraceDesk = () => {
       setTimeout(() => setExportSuccess(false), 3000);
     } catch (e) {
       console.error(e);
+      setPermissionError(e instanceof Error ? e.message : '导出失败');
     } finally {
       setExportLoading(false);
     }
@@ -263,6 +313,85 @@ export const FlowTraceDesk = () => {
     return 'bg-emerald-100 border-emerald-300 text-emerald-700';
   };
 
+  const PermissionBanner = () => {
+    if (permissionError) {
+      return (
+        <div className="p-4 rounded-lg bg-rose-50 border border-rose-200 flex items-start gap-3">
+          <AlertOctagon className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-rose-700 font-medium">访问被拒绝</p>
+            <p className="text-rose-600 text-sm mt-1">{permissionError}</p>
+            {listPermission?.errorCode && (
+              <p className="text-rose-500 text-xs mt-1 font-mono">错误码: {listPermission.errorCode}</p>
+            )}
+          </div>
+          <button
+            onClick={() => setPermissionError(null)}
+            className="ml-auto text-rose-400 hover:text-rose-600"
+          >
+            <XCircle className="w-4 h-4" />
+          </button>
+        </div>
+      );
+    }
+
+    if (listRedaction && sampleList.length > 0) {
+      return (
+        <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-3">
+          <EyeOff className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-amber-700 font-medium flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700">
+                <Eye className="w-3 h-3" />
+                非审核员模式
+              </span>
+              数据已脱敏
+            </p>
+            <p className="text-amber-600 text-sm mt-1">{listRedaction.message}</p>
+            <p className="text-amber-500 text-xs mt-1">
+              已脱敏字段: {listRedaction.redactedFields.join(', ')}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (isAuditor) {
+      return (
+        <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200 flex items-start gap-3">
+          <ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-emerald-700 font-medium flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700">
+                <CheckCircle2 className="w-3 h-3" />
+                审核员模式
+              </span>
+              完整数据访问
+            </p>
+            <p className="text-emerald-600 text-sm mt-1">您可以查看完整追溯数据、敏感信息和导出完整记录</p>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const DetailPermissionBanner = () => {
+    if (detailRedaction && traceData) {
+      return (
+        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2 mb-4">
+          <EyeOff className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-amber-700 text-sm font-medium">详情已脱敏</p>
+            <p className="text-amber-600 text-xs mt-0.5">{detailRedaction.message}</p>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (!canView) {
     return (
       <div className="space-y-6">
@@ -270,10 +399,17 @@ export const FlowTraceDesk = () => {
           <h1 className="text-2xl font-bold text-slate-900 font-serif">流转追溯台</h1>
           <p className="text-slate-500 mt-1">按样本追溯完整业务链，查看流转、拦截、回退与锁定状态</p>
         </div>
+        <PermissionBanner />
         <div className="glass-card p-12 text-center">
           <Lock className="w-16 h-16 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-500">您没有权限访问此页面</p>
           <p className="text-sm text-slate-400 mt-2">此功能仅限审核员和管理员使用</p>
+          {currentUser && (
+            <div className="mt-4 text-xs text-slate-400">
+              <p>当前角色: {ROLE_LABELS[currentUser.role]}</p>
+              <p className="mt-1">所需角色: 审核员 / 管理员</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -292,8 +428,16 @@ export const FlowTraceDesk = () => {
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100">
             共 {sampleList.length} 个样本
           </span>
+          {currentUser && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100">
+              <User className="w-3 h-3" />
+              {ROLE_LABELS[currentUser.role]}
+            </span>
+          )}
         </div>
       </div>
+
+      <PermissionBanner />
 
       <div className="glass-card p-5">
         <div className="flex items-center gap-2 mb-4">
@@ -496,6 +640,7 @@ export const FlowTraceDesk = () => {
             </div>
           ) : (
             <>
+              <DetailPermissionBanner />
               <div className="glass-card p-6">
                 <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
                   <div>
@@ -1071,15 +1216,35 @@ export const FlowTraceDesk = () => {
 
           <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
             <p className="text-sm font-medium text-slate-700 mb-2">导出内容包括：</p>
-            <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
-              <li>样本基本信息和锁定状态</li>
-              <li>业务环节链（各环节状态与完成情况）</li>
-              <li>最近一次有效流转详情</li>
-              <li>所有被拦截/失败操作（含错误类别与原因）</li>
-              <li>所有回退历史（含撤回落点与原因）</li>
-              <li>完整时间线</li>
-              <li>统计摘要数据</li>
-            </ul>
+            {isAuditor ? (
+              <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
+                <li>样本基本信息和锁定状态</li>
+                <li>业务环节链（各环节状态与完成情况）</li>
+                <li>最近一次有效流转详情</li>
+                <li>所有被拦截/失败操作（含错误类别与原因）</li>
+                <li>所有回退历史（含撤回落点与原因）</li>
+                <li>完整时间线</li>
+                <li>统计摘要数据</li>
+              </ul>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-start gap-2 text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                  <EyeOff className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">非审核员导出模式</p>
+                    <p className="mt-0.5">导出内容将被脱敏，仅包含样本基本信息和统计摘要</p>
+                  </div>
+                </div>
+                <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
+                  <li>样本基本信息（不含敏感字段）</li>
+                  <li>基础统计摘要（不含失败、回退详情）</li>
+                  <li>数据脱敏说明</li>
+                </ul>
+                <p className="text-xs text-slate-400 mt-2">
+                  需要完整数据请联系审核员或管理员
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </Modal>

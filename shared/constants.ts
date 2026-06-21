@@ -155,3 +155,29 @@ export const hashPassword = (password: string): string => {
   }
   return `hash_${Math.abs(hash).toString(16)}_${password.length}`;
 };
+
+export const FLOW_TRACE_PERMISSION_DENY_REASONS = {
+  ROLE_NOT_AUTHORIZED: '当前角色无权访问追溯功能',
+  PERMISSION_REVOKED: '追溯权限已被撤销',
+  SAMPLE_LOCKED: '该样本已锁定，需审核员权限',
+  EXPORT_QUOTA_EXCEEDED: '导出次数超出限制',
+  CONCURRENT_EXPORT_LIMIT: '并发导出数量超出限制',
+  SERVICE_RESTART_REAUTH: '服务重启后需重新验证权限',
+  PERMISSION_CHANGED_MID_OPERATION: '操作期间权限发生变更',
+  INSUFFICIENT_CLEARANCE: '安全等级不足，无法查看完整数据',
+} as const;
+
+export const FLOW_TRACE_AUDIT_ROLES: UserRole[] = ['auditor', 'admin'];
+
+export const FLOW_TRACE_REDACTION_LEVELS = {
+  MINIMAL: {
+    level: 'minimal' as const,
+    fields: ['blockedOperations', 'rollbackHistory', 'fullTimeline', 'latestValidTransfer'],
+    message: '您的权限仅允许查看样本基本信息',
+  },
+  PARTIAL: {
+    level: 'partial' as const,
+    fields: ['blockedOperations.errorMessage', 'rollbackHistory.reason', 'fullTimeline.remark', 'fullTimeline.errorMessage'],
+    message: '敏感字段已脱敏，如需完整信息请联系审核员',
+  },
+};

@@ -381,3 +381,60 @@ export interface FlowTraceFilter {
   isLocked?: boolean;
   isArchived?: boolean;
 }
+
+export type FlowTracePermissionAction = 'viewList' | 'viewDetail' | 'export';
+export type FlowTracePermissionDecision = 'allow' | 'deny' | 'redact';
+export type FlowTraceOperationStatus = 'success' | 'denied' | 'redacted' | 'error';
+
+export interface FlowTracePermissionCheck {
+  action: FlowTracePermissionAction;
+  sampleId?: string;
+  userId: string;
+  userRole: UserRole;
+  timestamp: string;
+  decision: FlowTracePermissionDecision;
+  reason: string;
+  errorCode?: string;
+}
+
+export interface FlowTraceOperationLog {
+  id: string;
+  operationId: string;
+  userId: string;
+  username: string;
+  userRole: UserRole;
+  action: FlowTracePermissionAction;
+  sampleId?: string;
+  sampleNo?: string;
+  timestamp: string;
+  status: FlowTraceOperationStatus;
+  permissionDecision: FlowTracePermissionDecision;
+  denyReason?: string;
+  errorCode?: string;
+  exportOptions?: FlowTraceExportOptions;
+  dataSize?: number;
+  clientInfo?: string;
+}
+
+export interface FlowTracePermissionState {
+  userId: string;
+  lastCheckAt: string;
+  grantedActions: FlowTracePermissionAction[];
+  revokedAt?: string;
+  revokeReason?: string;
+}
+
+export interface FlowTraceRedactedData {
+  level: 'basic' | 'partial' | 'minimal';
+  redactedFields: string[];
+  message: string;
+  grantedBy?: string;
+}
+
+export interface FlowTracePermissionEnvelope<T> {
+  data: T | null;
+  permission: FlowTracePermissionCheck;
+  redaction?: FlowTraceRedactedData;
+  operationId: string;
+  timestamp: string;
+}
